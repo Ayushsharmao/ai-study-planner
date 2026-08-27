@@ -2,10 +2,11 @@ import { storage } from '../services/storage.js';
 
 export const getAnalytics = (req, res) => {
   try {
-    const subjects = storage.getSubjects();
-    const deadlines = storage.getDeadlines();
-    const sessions = storage.getSessions();
-    const availability = storage.getAvailability();
+    const userId = req.user.id;
+    const subjects = storage.getSubjects(userId);
+    const deadlines = storage.getDeadlines(userId);
+    const sessions = storage.getSessions(userId);
+    const availability = storage.getAvailability(userId);
 
     // 1. Overall stats
     const totalSessions = sessions.length;
@@ -19,17 +20,15 @@ export const getAnalytics = (req, res) => {
     const totalPlannedHours = (totalPlannedMinutes / 60).toFixed(1);
     const totalActualHours = (totalActualMinutes / 60).toFixed(1);
 
-    // 2. Streak calculation (consecutive days with >= 1 completed session up to today)
+    // 2. Streak calculation
     const completedDates = new Set(completedSessions.map(s => s.date));
     let streak = 0;
     const checkDate = new Date();
     
-    // Check if today has a completed session
     const todayStr = checkDate.toISOString().split('T')[0];
     let isCurrent = completedDates.has(todayStr);
     
     if (!isCurrent) {
-      // Check yesterday to see if active streak was kept
       checkDate.setDate(checkDate.getDate() - 1);
       const yesterdayStr = checkDate.toISOString().split('T')[0];
       if (completedDates.has(yesterdayStr)) {
@@ -49,7 +48,7 @@ export const getAnalytics = (req, res) => {
       }
     }
 
-    // 3. Subject-level distribution & readiness
+    // 3. Subject-level distribution
     const subjectStats = subjects.map(sub => {
       const subSessions = sessions.filter(s => s.subjectId === sub.id);
       const subCompleted = subSessions.filter(s => s.completed);
@@ -79,7 +78,6 @@ export const getAnalytics = (req, res) => {
       const today = new Date();
       const daysLeft = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
       
-      // Readiness estimate based on subject completion and weight
       const subStat = subjectStats.find(s => s.id === d.subjectId);
       const readiness = subStat ? subStat.completionRate : 50;
 
@@ -98,7 +96,7 @@ export const getAnalytics = (req, res) => {
       };
     });
 
-    // 5. Daily study pattern (past 7 days + next 7 days)
+    // 5. Daily study pattern
     const dailyBreakdown = {};
     sessions.forEach(s => {
       if (!dailyBreakdown[s.date]) {

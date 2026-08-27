@@ -1,21 +1,20 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import mongoose from 'mongoose';
-import { SubjectSchema, DeadlineSchema, AvailabilitySchema, StudySessionSchema } from '../models/schemas.js';
+import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
 
-// Ensure data dir exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Initial seed data for realistic experience
-const getInitialSeedData = () => {
+// Generates realistic starter courses and study sessions for any user
+export const createStarterPackForUser = (userId) => {
   const today = new Date();
   const formatDate = (offsetDays) => {
     const d = new Date(today);
@@ -23,224 +22,212 @@ const getInitialSeedData = () => {
     return d.toISOString().split('T')[0];
   };
 
-  return {
-    subjects: [
-      {
-        id: 'sub-1',
-        name: 'Algorithms & Data Structures',
-        code: 'CS301',
-        color: '#6366f1', // Indigo
-        difficulty: 4,
-        priority: 'high',
-        targetGrade: 'A',
-        topics: [
-          { id: 't1', title: 'Dynamic Programming & Memoization', estimatedHours: 3, completed: true },
-          { id: 't2', title: 'Graph Algorithms (Dijkstra & A*)', estimatedHours: 4, completed: true },
-          { id: 't3', title: 'Minimum Spanning Trees & Disjoint Sets', estimatedHours: 3, completed: false },
-          { id: 't4', title: 'NP-Completeness & Approximation', estimatedHours: 2, completed: false }
-        ],
-        notes: 'Prof. Miller emphasizes runtime proofs and recursive implementations.',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'sub-2',
-        name: 'Multivariable Calculus',
-        code: 'MATH220',
-        color: '#ec4899', // Pink / Rose
-        difficulty: 4,
-        priority: 'medium',
-        targetGrade: 'A-',
-        topics: [
-          { id: 't5', title: 'Partial Derivatives & Chain Rule', estimatedHours: 2, completed: true },
-          { id: 't6', title: 'Double & Triple Integrals in Polar Coordinates', estimatedHours: 3, completed: false },
-          { id: 't7', title: 'Vector Fields & Green Theorem', estimatedHours: 4, completed: false },
-          { id: 't8', title: 'Stokes Theorem & Divergence Theorem', estimatedHours: 3, completed: false }
-        ],
-        notes: 'Practice problem sets on Stokes Theorem before quiz.',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'sub-3',
-        name: 'Database Systems & Architecture',
-        code: 'CS412',
-        color: '#10b981', // Emerald
-        difficulty: 3,
-        priority: 'urgent',
-        targetGrade: 'A+',
-        topics: [
-          { id: 't9', title: 'B-Tree Indexing & Query Optimization', estimatedHours: 3, completed: true },
-          { id: 't10', title: 'ACID Transactions & 2-Phase Locking', estimatedHours: 3, completed: true },
-          { id: 't11', title: 'Distributed Consensuses & NoSQL Sharding', estimatedHours: 4, completed: false }
-        ],
-        notes: 'Midterm exam is worth 35% of the total semester grade!',
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'sub-4',
-        name: 'Physics: Electromagnetism',
-        code: 'PHYS204',
-        color: '#f59e0b', // Amber
-        difficulty: 5,
-        priority: 'high',
-        targetGrade: 'B+',
-        topics: [
-          { id: 't12', title: 'Gauss Law & Electric Flux', estimatedHours: 3, completed: true },
-          { id: 't13', title: 'Magnetic Dipoles & Ampere Law', estimatedHours: 4, completed: false },
-          { id: 't14', title: 'Faraday Induction & Maxwell Equations', estimatedHours: 5, completed: false }
-        ],
-        notes: 'High difficulty. Needs extra spaced repetition sessions.',
-        createdAt: new Date().toISOString()
-      }
-    ],
-    deadlines: [
-      {
-        id: 'dead-1',
-        title: 'Database Architecture Midterm Exam',
-        subjectId: 'sub-3',
-        type: 'exam',
-        dueDate: formatDate(3), // 3 days from now
-        weight: 35,
-        priority: 'urgent',
-        completed: false,
-        notes: 'Covers Indexing, Query Processing, and Concurrency Control.'
-      },
-      {
-        id: 'dead-2',
-        title: 'Algorithms Homework 4: Graphs & MST',
-        subjectId: 'sub-1',
-        type: 'assignment',
-        dueDate: formatDate(5), // 5 days from now
-        weight: 15,
-        priority: 'high',
-        completed: false,
-        notes: 'Implement Kruskals and Prims in Python.'
-      },
-      {
-        id: 'dead-3',
-        title: 'Calculus Quiz: Vector Fields',
-        subjectId: 'sub-2',
-        type: 'quiz',
-        dueDate: formatDate(7), // 7 days from now
-        weight: 10,
-        priority: 'medium',
-        completed: false,
-        notes: 'Review Greens theorem exercises 14.1-14.4.'
-      },
-      {
-        id: 'dead-4',
-        title: 'Physics Midterm II',
-        subjectId: 'sub-4',
-        type: 'exam',
-        dueDate: formatDate(10), // 10 days from now
-        weight: 30,
-        priority: 'high',
-        completed: false,
-        notes: 'Formula sheet allowed (1 double-sided page).'
-      }
-    ],
-    availability: {
-      id: 'default_availability',
-      weeklyHours: {
-        monday: 3.5,
-        tuesday: 3.0,
-        wednesday: 4.0,
-        thursday: 3.5,
-        friday: 2.5,
-        saturday: 6.0,
-        sunday: 5.0
-      },
-      preferredTimeslot: 'evening',
-      preferredSessionMinutes: 45,
-      breakMinutes: 15,
-      maxDailyHours: 8,
-      bufferDaysBeforeExam: 1
+  const subjects = [
+    {
+      id: `sub-${uuidv4().slice(0, 8)}`,
+      userId,
+      name: 'Algorithms & Data Structures',
+      code: 'CS301',
+      color: '#6366f1',
+      difficulty: 4,
+      priority: 'high',
+      targetGrade: 'A',
+      topics: [
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'Dynamic Programming & Memoization', estimatedHours: 3, completed: true },
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'Graph Algorithms (Dijkstra & A*)', estimatedHours: 4, completed: true },
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'Minimum Spanning Trees & Disjoint Sets', estimatedHours: 3, completed: false },
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'NP-Completeness & Approximation', estimatedHours: 2, completed: false }
+      ],
+      notes: 'Focus on recursive implementations and runtime proofs.',
+      createdAt: new Date().toISOString()
     },
-    sessions: [
-      {
-        id: 'sess-1',
-        subjectId: 'sub-3',
-        deadlineId: 'dead-1',
-        topic: 'B-Tree Indexing & Query Optimization Review',
-        date: formatDate(0), // Today
-        startTime: '16:00',
-        endTime: '16:45',
-        durationMinutes: 45,
-        sessionType: 'review',
-        completed: true,
-        actualMinutesStudied: 45,
-        notes: 'Reviewed composite index order and clustered vs unclustered trees.'
-      },
-      {
-        id: 'sess-2',
-        subjectId: 'sub-3',
-        deadlineId: 'dead-1',
-        topic: 'ACID Transactions & 2-Phase Locking Practice',
-        date: formatDate(0), // Today
-        startTime: '17:00',
-        endTime: '17:45',
-        durationMinutes: 45,
-        sessionType: 'practice',
-        completed: true,
-        actualMinutesStudied: 50,
-        notes: 'Solved deadlock detection problem sets.'
-      },
-      {
-        id: 'sess-3',
-        subjectId: 'sub-1',
-        deadlineId: 'dead-2',
-        topic: 'Minimum Spanning Trees: Kruskals Algorithm',
-        date: formatDate(0), // Today
-        startTime: '18:00',
-        endTime: '18:45',
-        durationMinutes: 45,
-        sessionType: 'learn',
-        completed: false,
-        actualMinutesStudied: 0,
-        notes: 'Focus on Union-Find rank and path compression optimizations.'
-      },
-      {
-        id: 'sess-4',
-        subjectId: 'sub-3',
-        deadlineId: 'dead-1',
-        topic: 'Distributed Consensus & Midterm Mock Exam',
-        date: formatDate(1), // Tomorrow
-        startTime: '15:00',
-        endTime: '16:15',
-        durationMinutes: 75,
-        sessionType: 'mock_exam',
-        completed: false,
-        actualMinutesStudied: 0,
-        notes: 'Simulate full 75 min exam under timed conditions.'
-      },
-      {
-        id: 'sess-5',
-        subjectId: 'sub-2',
-        deadlineId: 'dead-3',
-        topic: 'Double Integrals in Polar Coordinates',
-        date: formatDate(1),
-        startTime: '17:00',
-        endTime: '17:45',
-        durationMinutes: 45,
-        sessionType: 'practice',
-        completed: false,
-        actualMinutesStudied: 0,
-        notes: 'Jacobian determinant conversions.'
-      },
-      {
-        id: 'sess-6',
-        subjectId: 'sub-4',
-        deadlineId: 'dead-4',
-        topic: 'Magnetic Dipoles & Ampere Law Fundamentals',
-        date: formatDate(2),
-        startTime: '16:30',
-        endTime: '17:15',
-        durationMinutes: 45,
-        sessionType: 'learn',
-        completed: false,
-        actualMinutesStudied: 0,
-        notes: 'Line integrals around closed loops.'
-      }
-    ]
+    {
+      id: `sub-${uuidv4().slice(0, 8)}`,
+      userId,
+      name: 'Multivariable Calculus',
+      code: 'MATH220',
+      color: '#ec4899',
+      difficulty: 4,
+      priority: 'medium',
+      targetGrade: 'A-',
+      topics: [
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'Partial Derivatives & Chain Rule', estimatedHours: 2, completed: true },
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'Double & Triple Integrals in Polar Coordinates', estimatedHours: 3, completed: false },
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'Vector Fields & Green Theorem', estimatedHours: 4, completed: false }
+      ],
+      notes: 'Practice problem sets on Greens and Stokes theorem.',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: `sub-${uuidv4().slice(0, 8)}`,
+      userId,
+      name: 'Database Systems & Architecture',
+      code: 'CS412',
+      color: '#10b981',
+      difficulty: 3,
+      priority: 'urgent',
+      targetGrade: 'A+',
+      topics: [
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'B-Tree Indexing & Query Optimization', estimatedHours: 3, completed: true },
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'ACID Transactions & 2-Phase Locking', estimatedHours: 3, completed: true },
+        { id: `top-${uuidv4().slice(0, 6)}`, title: 'Distributed Consensus & Sharding', estimatedHours: 4, completed: false }
+      ],
+      notes: 'Midterm exam is worth 35% of total grade.',
+      createdAt: new Date().toISOString()
+    }
+  ];
+
+  const deadlines = [
+    {
+      id: `dead-${uuidv4().slice(0, 8)}`,
+      userId,
+      title: 'Database Architecture Midterm',
+      subjectId: subjects[2].id,
+      type: 'exam',
+      dueDate: formatDate(3),
+      weight: 35,
+      priority: 'urgent',
+      completed: false,
+      notes: 'Covers Indexing, Query Optimization, and Concurrency.'
+    },
+    {
+      id: `dead-${uuidv4().slice(0, 8)}`,
+      userId,
+      title: 'Algorithms Assignment: Graphs & MST',
+      subjectId: subjects[0].id,
+      type: 'assignment',
+      dueDate: formatDate(5),
+      weight: 15,
+      priority: 'high',
+      completed: false,
+      notes: 'Implement Kruskals and Prims in Python.'
+    },
+    {
+      id: `dead-${uuidv4().slice(0, 8)}`,
+      userId,
+      title: 'Calculus Quiz: Vector Fields',
+      subjectId: subjects[1].id,
+      type: 'quiz',
+      dueDate: formatDate(7),
+      weight: 10,
+      priority: 'medium',
+      completed: false,
+      notes: 'Review exercises 14.1-14.4.'
+    }
+  ];
+
+  const availability = {
+    id: `avail-${userId}`,
+    userId,
+    weeklyHours: {
+      monday: 3.5,
+      tuesday: 3.0,
+      wednesday: 4.0,
+      thursday: 3.5,
+      friday: 2.5,
+      saturday: 6.0,
+      sunday: 5.0
+    },
+    preferredTimeslot: 'evening',
+    preferredSessionMinutes: 45,
+    breakMinutes: 15,
+    maxDailyHours: 8,
+    bufferDaysBeforeExam: 1
+  };
+
+  const sessions = [
+    {
+      id: `sess-${uuidv4().slice(0, 8)}`,
+      userId,
+      subjectId: subjects[2].id,
+      deadlineId: deadlines[0].id,
+      topic: 'B-Tree Indexing & Query Optimization Review',
+      date: formatDate(0),
+      startTime: '16:00',
+      endTime: '16:45',
+      durationMinutes: 45,
+      sessionType: 'review',
+      completed: true,
+      actualMinutesStudied: 45,
+      notes: 'Reviewed composite index order and clustered vs unclustered trees.'
+    },
+    {
+      id: `sess-${uuidv4().slice(0, 8)}`,
+      userId,
+      subjectId: subjects[0].id,
+      deadlineId: deadlines[1].id,
+      topic: 'Minimum Spanning Trees: Kruskals Algorithm',
+      date: formatDate(0),
+      startTime: '17:00',
+      endTime: '17:45',
+      durationMinutes: 45,
+      sessionType: 'learn',
+      completed: false,
+      actualMinutesStudied: 0,
+      notes: 'Focus on Union-Find rank and path compression optimizations.'
+    },
+    {
+      id: `sess-${uuidv4().slice(0, 8)}`,
+      userId,
+      subjectId: subjects[2].id,
+      deadlineId: deadlines[0].id,
+      topic: 'ACID Transactions & 2-Phase Locking Practice',
+      date: formatDate(1),
+      startTime: '18:00',
+      endTime: '18:45',
+      durationMinutes: 45,
+      sessionType: 'practice',
+      completed: false,
+      actualMinutesStudied: 0,
+      notes: 'Solved deadlock detection problem sets.'
+    }
+  ];
+
+  return { subjects, deadlines, availability, sessions };
+};
+
+const getInitialSeedData = () => {
+  const adminSalt = bcrypt.genSaltSync(10);
+  const studentSalt = bcrypt.genSaltSync(10);
+
+  const adminUser = {
+    id: 'usr-admin-1',
+    name: 'Admin Ayush',
+    email: 'admin@studymind.ai',
+    passwordHash: bcrypt.hashSync('admin123', adminSalt),
+    role: 'admin',
+    createdAt: new Date().toISOString()
+  };
+
+  const demoStudent = {
+    id: 'usr-student-1',
+    name: 'Alex Rivera',
+    email: 'alex@student.com',
+    passwordHash: bcrypt.hashSync('student123', studentSalt),
+    role: 'student',
+    createdAt: new Date().toISOString()
+  };
+
+  const adminPack = createStarterPackForUser(adminUser.id);
+  const studentPack = createStarterPackForUser(demoStudent.id);
+
+  return {
+    users: [adminUser, demoStudent],
+    siteSettings: {
+      id: 'global_settings',
+      siteName: 'StudyMind AI',
+      announcementText: '🚀 Welcome to StudyMind AI! Optimize your study schedule with adaptive spaced repetition.',
+      announcementActive: true,
+      defaultSessionDuration: 45,
+      defaultBreakDuration: 15,
+      maxDailyHoursCap: 8,
+      allowRegistration: true,
+      aiEngineModel: 'Gemini Flash & Spaced-Repetition Optimizer'
+    },
+    subjects: [...adminPack.subjects, ...studentPack.subjects],
+    deadlines: [...adminPack.deadlines, ...studentPack.deadlines],
+    availabilities: [adminPack.availability, studentPack.availability],
+    sessions: [...adminPack.sessions, ...studentPack.sessions]
   };
 };
 
@@ -259,6 +246,12 @@ class StorageService {
       try {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         this.memoryData = JSON.parse(raw);
+        // Ensure collections exist
+        if (!this.memoryData.users) {
+          const initial = getInitialSeedData();
+          this.memoryData = initial;
+          this.save();
+        }
       } catch (err) {
         console.error('Error reading storage, resetting to seed data:', err);
         const initial = getInitialSeedData();
@@ -276,23 +269,105 @@ class StorageService {
     }
   }
 
-  // Subjects
-  getSubjects() {
-    return this.memoryData.subjects || [];
+  // --- Users ---
+  getUsers() {
+    return this.memoryData.users || [];
   }
 
-  getSubjectById(id) {
-    return this.getSubjects().find(s => s.id === id);
+  getUserById(id) {
+    return this.getUsers().find(u => u.id === id);
   }
 
-  createSubject(subject) {
-    this.memoryData.subjects.push(subject);
+  getUserByEmail(email) {
+    if (!email) return null;
+    return this.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+  }
+
+  createUser(userData) {
+    const newUser = {
+      id: userData.id || `usr-${uuidv4().slice(0, 8)}`,
+      name: userData.name,
+      email: userData.email.toLowerCase(),
+      passwordHash: userData.passwordHash,
+      role: userData.role || 'student',
+      createdAt: new Date().toISOString()
+    };
+    this.memoryData.users.push(newUser);
+
+    // Auto-create starter study pack for this new user
+    const starterPack = createStarterPackForUser(newUser.id);
+    this.memoryData.subjects.push(...starterPack.subjects);
+    this.memoryData.deadlines.push(...starterPack.deadlines);
+    this.memoryData.availabilities.push(starterPack.availability);
+    this.memoryData.sessions.push(...starterPack.sessions);
+
     this.save();
-    return subject;
+    return newUser;
   }
 
-  updateSubject(id, updates) {
-    const idx = this.memoryData.subjects.findIndex(s => s.id === id);
+  deleteUser(userId) {
+    this.memoryData.users = this.memoryData.users.filter(u => u.id !== userId);
+    this.memoryData.subjects = this.memoryData.subjects.filter(s => s.userId !== userId);
+    this.memoryData.deadlines = this.memoryData.deadlines.filter(d => d.userId !== userId);
+    this.memoryData.availabilities = (this.memoryData.availabilities || []).filter(a => a.userId !== userId);
+    this.memoryData.sessions = this.memoryData.sessions.filter(s => s.userId !== userId);
+    this.save();
+    return true;
+  }
+
+  updateUserRole(userId, newRole) {
+    const u = this.getUserById(userId);
+    if (u) {
+      u.role = newRole;
+      this.save();
+      return u;
+    }
+    return null;
+  }
+
+  // --- Site Settings ---
+  getSiteSettings() {
+    if (!this.memoryData.siteSettings) {
+      this.memoryData.siteSettings = {
+        id: 'global_settings',
+        siteName: 'StudyMind AI',
+        announcementText: '🚀 Welcome to StudyMind AI! Spaced repetition scheduler active.',
+        announcementActive: true,
+        defaultSessionDuration: 45,
+        defaultBreakDuration: 15,
+        maxDailyHoursCap: 8,
+        allowRegistration: true,
+        aiEngineModel: 'Gemini Flash & Heuristic Optimizer'
+      };
+      this.save();
+    }
+    return this.memoryData.siteSettings;
+  }
+
+  updateSiteSettings(updates) {
+    this.memoryData.siteSettings = { ...this.getSiteSettings(), ...updates };
+    this.save();
+    return this.memoryData.siteSettings;
+  }
+
+  // --- Subjects (Scoped by userId) ---
+  getSubjects(userId) {
+    return (this.memoryData.subjects || []).filter(s => s.userId === userId);
+  }
+
+  getSubjectById(userId, id) {
+    return this.getSubjects(userId).find(s => s.id === id);
+  }
+
+  createSubject(userId, subject) {
+    const item = { ...subject, userId };
+    this.memoryData.subjects.push(item);
+    this.save();
+    return item;
+  }
+
+  updateSubject(userId, id, updates) {
+    const idx = this.memoryData.subjects.findIndex(s => s.id === id && s.userId === userId);
     if (idx !== -1) {
       this.memoryData.subjects[idx] = { ...this.memoryData.subjects[idx], ...updates };
       this.save();
@@ -301,28 +376,28 @@ class StorageService {
     return null;
   }
 
-  deleteSubject(id) {
-    this.memoryData.subjects = this.memoryData.subjects.filter(s => s.id !== id);
-    // Also remove associated deadlines and sessions
-    this.memoryData.deadlines = this.memoryData.deadlines.filter(d => d.subjectId !== id);
-    this.memoryData.sessions = this.memoryData.sessions.filter(s => s.subjectId !== id);
+  deleteSubject(userId, id) {
+    this.memoryData.subjects = this.memoryData.subjects.filter(s => !(s.id === id && s.userId === userId));
+    this.memoryData.deadlines = this.memoryData.deadlines.filter(d => !(d.subjectId === id && d.userId === userId));
+    this.memoryData.sessions = this.memoryData.sessions.filter(s => !(s.subjectId === id && s.userId === userId));
     this.save();
     return true;
   }
 
-  // Deadlines
-  getDeadlines() {
-    return this.memoryData.deadlines || [];
+  // --- Deadlines (Scoped by userId) ---
+  getDeadlines(userId) {
+    return (this.memoryData.deadlines || []).filter(d => d.userId === userId);
   }
 
-  createDeadline(deadline) {
-    this.memoryData.deadlines.push(deadline);
+  createDeadline(userId, deadline) {
+    const item = { ...deadline, userId };
+    this.memoryData.deadlines.push(item);
     this.save();
-    return deadline;
+    return item;
   }
 
-  updateDeadline(id, updates) {
-    const idx = this.memoryData.deadlines.findIndex(d => d.id === id);
+  updateDeadline(userId, id, updates) {
+    const idx = this.memoryData.deadlines.findIndex(d => d.id === id && d.userId === userId);
     if (idx !== -1) {
       this.memoryData.deadlines[idx] = { ...this.memoryData.deadlines[idx], ...updates };
       this.save();
@@ -331,11 +406,10 @@ class StorageService {
     return null;
   }
 
-  deleteDeadline(id) {
-    this.memoryData.deadlines = this.memoryData.deadlines.filter(d => d.id !== id);
-    // Clean up session associations
+  deleteDeadline(userId, id) {
+    this.memoryData.deadlines = this.memoryData.deadlines.filter(d => !(d.id === id && d.userId === userId));
     this.memoryData.sessions = this.memoryData.sessions.map(s => {
-      if (s.deadlineId === id) {
+      if (s.deadlineId === id && s.userId === userId) {
         return { ...s, deadlineId: null };
       }
       return s;
@@ -344,36 +418,70 @@ class StorageService {
     return true;
   }
 
-  // Availability
-  getAvailability() {
-    return this.memoryData.availability;
+  // --- Availability (Scoped by userId) ---
+  getAvailability(userId) {
+    let avail = (this.memoryData.availabilities || []).find(a => a.userId === userId);
+    if (!avail) {
+      avail = {
+        id: `avail-${userId}`,
+        userId,
+        weeklyHours: {
+          monday: 3.5,
+          tuesday: 3.0,
+          wednesday: 4.0,
+          thursday: 3.5,
+          friday: 2.5,
+          saturday: 6.0,
+          sunday: 5.0
+        },
+        preferredTimeslot: 'evening',
+        preferredSessionMinutes: 45,
+        breakMinutes: 15,
+        maxDailyHours: 8,
+        bufferDaysBeforeExam: 1
+      };
+      if (!this.memoryData.availabilities) this.memoryData.availabilities = [];
+      this.memoryData.availabilities.push(avail);
+      this.save();
+    }
+    return avail;
   }
 
-  updateAvailability(updates) {
-    this.memoryData.availability = { ...this.memoryData.availability, ...updates };
+  updateAvailability(userId, updates) {
+    const idx = (this.memoryData.availabilities || []).findIndex(a => a.userId === userId);
+    if (idx !== -1) {
+      this.memoryData.availabilities[idx] = { ...this.memoryData.availabilities[idx], ...updates };
+    } else {
+      if (!this.memoryData.availabilities) this.memoryData.availabilities = [];
+      this.memoryData.availabilities.push({ id: `avail-${userId}`, userId, ...updates });
+    }
     this.save();
-    return this.memoryData.availability;
+    return this.getAvailability(userId);
   }
 
-  // Sessions
-  getSessions() {
-    return this.memoryData.sessions || [];
+  // --- Sessions (Scoped by userId) ---
+  getSessions(userId) {
+    return (this.memoryData.sessions || []).filter(s => s.userId === userId);
   }
 
-  setSessions(sessions) {
-    this.memoryData.sessions = sessions;
+  setSessions(userId, sessions) {
+    // Keep other users' sessions and replace only this user's sessions
+    const otherUsersSessions = (this.memoryData.sessions || []).filter(s => s.userId !== userId);
+    const stampedSessions = sessions.map(s => ({ ...s, userId }));
+    this.memoryData.sessions = [...otherUsersSessions, ...stampedSessions];
     this.save();
-    return this.memoryData.sessions;
+    return stampedSessions;
   }
 
-  createSession(session) {
-    this.memoryData.sessions.push(session);
+  createSession(userId, session) {
+    const item = { ...session, userId };
+    this.memoryData.sessions.push(item);
     this.save();
-    return session;
+    return item;
   }
 
-  updateSession(id, updates) {
-    const idx = this.memoryData.sessions.findIndex(s => s.id === id);
+  updateSession(userId, id, updates) {
+    const idx = this.memoryData.sessions.findIndex(s => s.id === id && s.userId === userId);
     if (idx !== -1) {
       this.memoryData.sessions[idx] = { ...this.memoryData.sessions[idx], ...updates };
       this.save();
@@ -382,17 +490,10 @@ class StorageService {
     return null;
   }
 
-  deleteSession(id) {
-    this.memoryData.sessions = this.memoryData.sessions.filter(s => s.id !== id);
+  deleteSession(userId, id) {
+    this.memoryData.sessions = this.memoryData.sessions.filter(s => !(s.id === id && s.userId === userId));
     this.save();
     return true;
-  }
-
-  resetToDefault() {
-    const initial = getInitialSeedData();
-    this.memoryData = initial;
-    this.save();
-    return initial;
   }
 }
 

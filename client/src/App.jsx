@@ -6,16 +6,27 @@ import SubjectManager from './components/SubjectManager';
 import DeadlineManager from './components/DeadlineManager';
 import AvailabilitySettings from './components/AvailabilitySettings';
 import AnalyticsView from './components/AnalyticsView';
+import AdminDashboard from './components/AdminDashboard';
 import PomodoroTimer from './components/PomodoroTimer';
 import QuickAddModal from './components/QuickAddModal';
+import AuthModal from './components/AuthModal';
 import * as api from './services/api';
 import confetti from 'canvas-confetti';
+import { Megaphone, X } from 'lucide-react';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [theme, setTheme] = useState('dark');
 
-  // Core data states
+  // User Auth State
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Global Site Settings / Announcements
+  const [siteSettings, setSiteSettings] = useState(null);
+  const [dismissAnnouncement, setDismissAnnouncement] = useState(false);
+
+  // Core Study Data
   const [subjects, setSubjects] = useState([]);
   const [deadlines, setDeadlines] = useState([]);
   const [availability, setAvailability] = useState(null);
@@ -32,16 +43,43 @@ export default function App() {
   const [activeSessionForTimer, setActiveSessionForTimer] = useState(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // Load all initial data from backend
-  const loadData = async () => {
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Load initial settings and check user session
+  const initApp = async () => {
     try {
       setLoading(true);
+      // 1. Fetch public site settings & announcement
+      const publicSettings = await api.getPublicSettings().catch(() => null);
+      if (publicSettings) setSiteSettings(publicSettings);
+
+      // 2. Check if user has active session token
+      const user = await api.getMe();
+      if (user) {
+        setCurrentUser(user);
+        await loadUserData();
+      } else {
+        // Not logged in: open auth modal so user can sign in or choose instant demo preview
+        setIsAuthModalOpen(true);
+      }
+    } catch (err) {
+      console.error('App init error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserData = async () => {
+    try {
       const [subs, deads, avail, sess, anlys] = await Promise.all([
-        api.getSubjects(),
-        api.getDeadlines(),
-        api.getAvailability(),
-        api.getSchedule(),
-        api.getAnalytics()
+        api.getSubjects().catch(() => []),
+        api.getDeadlines().catch(() => []),
+        api.getAvailability().catch(() => null),
+        api.getSchedule().catch(() => []),
+        api.getAnalytics().catch(() => null)
       ]);
 
       setSubjects(subs || []);
@@ -50,20 +88,36 @@ export default function App() {
       setSessions(sess || []);
       setAnalytics(anlys || null);
     } catch (err) {
-      console.error('Failed to load data:', err);
-      showToast('⚠️ Could not connect to API server. Ensure backend is running.');
-    } finally {
-      setLoading(false);
+      console.error('Failed to load user data:', err);
+      showToast('⚠️ Could not load data. Ensure you are signed in.');
     }
   };
 
   useEffect(() => {
-    loadData();
+    initApp();
   }, []);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+  const handleAuthSuccess = async (user) => {
+    setCurrentUser(user);
+    showToast(`Welcome back, ${user.name}!`);
+    await loadUserData();
+    if (user.role === 'admin') {
+      setCurrentTab('admin');
+    } else {
+      setCurrentTab('dashboard');
+    }
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setCurrentUser(null);
+    setSubjects([]);
+    setDeadlines([]);
+    setSessions([]);
+    setAnalytics(null);
+    setCurrentTab('dashboard');
+    showToast('Signed out successfully.');
+    setIsAuthModalOpen(true);
   };
 
   // Session actions
@@ -71,11 +125,9 @@ export default function App() {
     try {
       const updated = await api.toggleSession(sessionId, actualMinutes);
       setSessions(prev => prev.map(s => s.id === sessionId ? updated : s));
-      // Refresh analytics
       const newAnalytics = await api.getAnalytics();
       setAnalytics(newAnalytics);
     } catch (err) {
-      console.error(err);
       showToast(`Error updating session: ${err.message}`);
     }
   };
@@ -88,7 +140,6 @@ export default function App() {
       setAnalytics(newAnalytics);
       showToast('Session removed from schedule');
     } catch (err) {
-      console.error(err);
       showToast(`Error deleting session: ${err.message}`);
     }
   };
@@ -104,7 +155,6 @@ export default function App() {
       confetti({ particleCount: 80, spread: 80, origin: { y: 0.5 } });
       showToast(`✨ Generated ${res.count} optimized study sessions with spaced repetition!`);
     } catch (err) {
-      console.error(err);
       showToast(`Generation failed: ${err.message}`);
     } finally {
       setIsGenerating(false);
@@ -121,7 +171,6 @@ export default function App() {
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
       showToast(`⚡ ${res.message || 'Smart rebalance complete!'}`);
     } catch (err) {
-      console.error(err);
       showToast(`Rebalance failed: ${err.message}`);
     }
   };
@@ -132,7 +181,6 @@ export default function App() {
       const created = await api.createSubject(subjectData);
       setSubjects(prev => [...prev, created]);
       showToast(`Subject "${created.name}" created!`);
-      // Update analytics
       const newAnalytics = await api.getAnalytics();
       setAnalytics(newAnalytics);
     } catch (err) {
@@ -238,7 +286,6 @@ export default function App() {
     showToast(`🎯 Logged ${minutesSpent}m focus study session!`);
   };
 
-  // Filter today's sessions
   const todayStr = new Date().toISOString().split('T')[0];
   const todaySessions = sessions.filter(s => s.date === todayStr);
 
@@ -251,12 +298,41 @@ export default function App() {
         theme={theme}
         setTheme={setTheme}
         stats={analytics?.summary}
+        currentUser={currentUser}
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}
         onOpenTimer={() => {
           setActiveSessionForTimer(null);
           setIsTimerOpen(true);
         }}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
+
+      {/* Broadcast Announcement Banner (Controlled by Admin in Site Settings) */}
+      {siteSettings?.announcementActive && siteSettings?.announcementText && !dismissAnnouncement && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(99, 102, 241, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
+          borderBottom: '1px solid rgba(99, 102, 241, 0.3)',
+          padding: '10px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.88rem',
+          color: 'var(--text-main)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0 auto' }}>
+            <Megaphone size={16} style={{ color: '#f59e0b' }} />
+            <span>{siteSettings.announcementText}</span>
+          </div>
+          <button 
+            className="icon-btn" 
+            style={{ width: '24px', height: '24px' }} 
+            onClick={() => setDismissAnnouncement(true)}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Toast Alert */}
       {toastMessage && (
@@ -284,8 +360,8 @@ export default function App() {
       <main className="main-content">
         {loading ? (
           <div style={{ textAlign: 'center', padding: '100px 20px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '16px' }}>🧠</div>
-            <h2>Loading your study plan...</h2>
+            <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🧠</div>
+            <h2>Connecting to StudyMind AI...</h2>
           </div>
         ) : (
           <>
@@ -355,6 +431,13 @@ export default function App() {
                 deadlines={deadlines}
               />
             )}
+
+            {/* Exclusive Admin Dashboard (Rendered ONLY if admin) */}
+            {currentTab === 'admin' && currentUser?.role === 'admin' && (
+              <AdminDashboard 
+                onSiteSettingsUpdated={(updated) => setSiteSettings(updated)}
+              />
+            )}
           </>
         )}
       </main>
@@ -374,6 +457,13 @@ export default function App() {
         subjects={subjects}
         onCreateSubject={handleCreateSubject}
         onCreateDeadline={handleCreateDeadline}
+      />
+
+      {/* User Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
       />
     </div>
   );

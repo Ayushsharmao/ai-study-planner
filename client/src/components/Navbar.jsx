@@ -11,7 +11,11 @@ import {
   Timer, 
   Plus, 
   Sun, 
-  Moon 
+  Moon,
+  Shield,
+  User,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -20,8 +24,11 @@ export default function Navbar({
   theme, 
   setTheme, 
   stats, 
+  currentUser,
   onOpenQuickAdd, 
-  onOpenTimer 
+  onOpenTimer,
+  onOpenAuth,
+  onLogout
 }) {
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -37,6 +44,11 @@ export default function Navbar({
     { id: 'availability', label: 'Study Hours', icon: Sliders },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 }
   ];
+
+  // If user is Admin, add the exclusive Admin tab
+  if (currentUser && currentUser.role === 'admin') {
+    navItems.push({ id: 'admin', label: 'Admin', icon: Shield, isAdmin: true });
+  }
 
   return (
     <header className="navbar">
@@ -63,9 +75,15 @@ export default function Navbar({
                 id={`nav-${item.id}`}
                 className={`nav-tab-btn ${isActive ? 'active' : ''}`}
                 onClick={() => setCurrentTab(item.id)}
+                style={item.isAdmin ? { color: isActive ? 'white' : '#c084fc' } : {}}
               >
                 <Icon size={16} />
                 <span>{item.label}</span>
+                {item.isAdmin && (
+                  <span style={{ fontSize: '0.62rem', background: 'rgba(168, 85, 247, 0.25)', padding: '1px 5px', borderRadius: '4px' }}>
+                    ADMIN
+                  </span>
+                )}
               </button>
             );
           })}
@@ -109,6 +127,64 @@ export default function Navbar({
           >
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
+
+          {/* User Account / Auth */}
+          {currentUser ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  background: currentUser.role === 'admin' ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg-secondary)',
+                  border: '1px solid var(--border-subtle)'
+                }}
+              >
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  background: currentUser.role === 'admin' ? 'var(--accent-gradient)' : 'var(--accent-cyan-gradient)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  color: 'white'
+                }}>
+                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span style={{ fontSize: '0.84rem', fontWeight: 600 }}>
+                  {currentUser.name.split(' ')[0]}
+                </span>
+                {currentUser.role === 'admin' && (
+                  <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#c084fc', textTransform: 'uppercase' }}>
+                    Admin
+                  </span>
+                )}
+              </div>
+
+              <button
+                id="btn-logout"
+                className="icon-btn"
+                onClick={onLogout}
+                title="Sign Out"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              id="btn-open-login"
+              className="btn btn-secondary btn-sm"
+              onClick={onOpenAuth}
+            >
+              <LogIn size={15} />
+              <span>Sign In</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

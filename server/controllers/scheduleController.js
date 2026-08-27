@@ -3,8 +3,9 @@ import { generateSchedule as runScheduler, rebalanceSchedule as runRebalancer } 
 
 export const getSchedule = (req, res) => {
   try {
+    const userId = req.user.id;
     const { startDate, endDate, subjectId } = req.query;
-    let sessions = storage.getSessions();
+    let sessions = storage.getSessions(userId);
 
     if (startDate) {
       sessions = sessions.filter(s => s.date >= startDate);
@@ -16,7 +17,6 @@ export const getSchedule = (req, res) => {
       sessions = sessions.filter(s => s.subjectId === subjectId);
     }
 
-    // Sort by date, then by startTime
     sessions.sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       return (a.startTime || '').localeCompare(b.startTime || '');
@@ -30,9 +30,10 @@ export const getSchedule = (req, res) => {
 
 export const generateSchedule = (req, res) => {
   try {
-    const subjects = storage.getSubjects();
-    const deadlines = storage.getDeadlines();
-    const availability = storage.getAvailability();
+    const userId = req.user.id;
+    const subjects = storage.getSubjects(userId);
+    const deadlines = storage.getDeadlines(userId);
+    const availability = storage.getAvailability(userId);
 
     const { daysAhead = 14, preserveCompleted = true } = req.body;
 
@@ -44,15 +45,13 @@ export const generateSchedule = (req, res) => {
       daysAhead: Number(daysAhead)
     });
 
-    // If preserveCompleted is true, keep any sessions that are already marked completed
     let finalSessions = generatedSessions;
     if (preserveCompleted) {
-      const existingCompleted = storage.getSessions().filter(s => s.completed);
-      // Merge
+      const existingCompleted = storage.getSessions(userId).filter(s => s.completed);
       finalSessions = [...existingCompleted, ...generatedSessions];
     }
 
-    storage.setSessions(finalSessions);
+    storage.setSessions(userId, finalSessions);
 
     res.json({
       success: true,
@@ -68,9 +67,10 @@ export const generateSchedule = (req, res) => {
 
 export const toggleSession = (req, res) => {
   try {
+    const userId = req.user.id;
     const { id } = req.params;
     const { actualMinutesStudied } = req.body;
-    const session = storage.getSessions().find(s => s.id === id);
+    const session = storage.getSessions(userId).find(s => s.id === id);
 
     if (!session) {
       return res.status(404).json({ success: false, error: 'Session not found' });
@@ -84,7 +84,7 @@ export const toggleSession = (req, res) => {
         : 0
     };
 
-    const updated = storage.updateSession(id, updates);
+    const updated = storage.updateSession(userId, id, updates);
     res.json({ success: true, data: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -93,7 +93,8 @@ export const toggleSession = (req, res) => {
 
 export const updateSession = (req, res) => {
   try {
-    const updated = storage.updateSession(req.params.id, req.body);
+    const userId = req.user.id;
+    const updated = storage.updateSession(userId, req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, error: 'Session not found' });
     }
@@ -105,7 +106,8 @@ export const updateSession = (req, res) => {
 
 export const deleteSession = (req, res) => {
   try {
-    const deleted = storage.deleteSession(req.params.id);
+    const userId = req.user.id;
+    const deleted = storage.deleteSession(userId, req.params.id);
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Session not found' });
     }
@@ -117,10 +119,11 @@ export const deleteSession = (req, res) => {
 
 export const rebalanceSchedule = (req, res) => {
   try {
-    const subjects = storage.getSubjects();
-    const deadlines = storage.getDeadlines();
-    const availability = storage.getAvailability();
-    const existingSessions = storage.getSessions();
+    const userId = req.user.id;
+    const subjects = storage.getSubjects(userId);
+    const deadlines = storage.getDeadlines(userId);
+    const availability = storage.getAvailability(userId);
+    const existingSessions = storage.getSessions(userId);
 
     const result = runRebalancer({
       existingSessions,
@@ -129,7 +132,7 @@ export const rebalanceSchedule = (req, res) => {
       availability
     });
 
-    storage.setSessions(result.sessions);
+    storage.setSessions(userId, result.sessions);
 
     res.json({
       success: true,

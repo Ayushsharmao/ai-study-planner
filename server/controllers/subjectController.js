@@ -3,7 +3,8 @@ import { storage } from '../services/storage.js';
 
 export const getSubjects = (req, res) => {
   try {
-    const subjects = storage.getSubjects();
+    const userId = req.user.id;
+    const subjects = storage.getSubjects(userId);
     res.json({ success: true, count: subjects.length, data: subjects });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -12,7 +13,8 @@ export const getSubjects = (req, res) => {
 
 export const getSubjectById = (req, res) => {
   try {
-    const subject = storage.getSubjectById(req.params.id);
+    const userId = req.user.id;
+    const subject = storage.getSubjectById(userId, req.params.id);
     if (!subject) {
       return res.status(404).json({ success: false, error: 'Subject not found' });
     }
@@ -24,6 +26,7 @@ export const getSubjectById = (req, res) => {
 
 export const createSubject = (req, res) => {
   try {
+    const userId = req.user.id;
     const { name, code, color, difficulty, priority, targetGrade, topics, notes } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, error: 'Subject name is required' });
@@ -35,6 +38,7 @@ export const createSubject = (req, res) => {
 
     const newSubject = {
       id: `sub-${uuidv4().slice(0, 8)}`,
+      userId,
       name,
       code: code || '',
       color: color || '#6366f1',
@@ -46,7 +50,7 @@ export const createSubject = (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    const saved = storage.createSubject(newSubject);
+    const saved = storage.createSubject(userId, newSubject);
     res.status(201).json({ success: true, data: saved });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -55,7 +59,8 @@ export const createSubject = (req, res) => {
 
 export const updateSubject = (req, res) => {
   try {
-    const updated = storage.updateSubject(req.params.id, req.body);
+    const userId = req.user.id;
+    const updated = storage.updateSubject(userId, req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, error: 'Subject not found' });
     }
@@ -67,7 +72,8 @@ export const updateSubject = (req, res) => {
 
 export const deleteSubject = (req, res) => {
   try {
-    const deleted = storage.deleteSubject(req.params.id);
+    const userId = req.user.id;
+    const deleted = storage.deleteSubject(userId, req.params.id);
     if (!deleted) {
       return res.status(404).json({ success: false, error: 'Subject not found' });
     }
