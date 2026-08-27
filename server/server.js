@@ -62,8 +62,8 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
   await connectDB();
 
-  app.listen(PORT, () => {
-    console.log(`🚀 AI Study Planner API server listening on http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 AI Study Planner API server listening on port ${PORT}`);
   });
 };
 
