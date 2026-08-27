@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, X, CheckCircle2, Volume2, VolumeX, Sparkles } from 'lucide-react';
+import { Play, Pause, RotateCcw, X, CheckCircle2, Volume2, VolumeX } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessionCompleted }) {
@@ -11,7 +11,6 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
 
   const timerRef = useRef(null);
 
-  // Set initial time based on activeSession if provided
   useEffect(() => {
     if (activeSession && activeSession.durationMinutes) {
       const sec = activeSession.durationMinutes * 60;
@@ -22,7 +21,6 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
     }
   }, [activeSession]);
 
-  // Audio synthesizer chime using Web Audio API
   const playChime = () => {
     if (!soundEnabled) return;
     try {
@@ -35,7 +33,7 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime + start);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -43,10 +41,9 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
         osc.stop(ctx.currentTime + start + duration);
       };
 
-      // Gentle melodic chime (E5 -> G#5 -> B5)
-      playTone(659.25, 0, 0.6);
-      playTone(830.61, 0.2, 0.8);
-      playTone(987.77, 0.4, 1.2);
+      playTone(523.25, 0, 0.5);  // C5
+      playTone(659.25, 0.15, 0.7); // E5
+      playTone(783.99, 0.3, 1.0);  // G5
     } catch (e) {
       console.warn('Audio chime error:', e);
     }
@@ -60,7 +57,7 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
             clearInterval(timerRef.current);
             setIsRunning(false);
             playChime();
-            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
             return 0;
           }
           return prev - 1;
@@ -94,16 +91,15 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
     if (activeSession && onSessionCompleted) {
       const minutesSpent = Math.ceil((totalSeconds - secondsLeft) / 60) || activeSession.durationMinutes;
       onSessionCompleted(activeSession.id, minutesSpent);
-      confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
       onClose();
     }
   };
 
   if (!isOpen) return null;
 
-  // Calculate circular progress
   const progressPercent = totalSeconds > 0 ? (secondsLeft / totalSeconds) : 0;
-  const radius = 100;
+  const radius = 90;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progressPercent * circumference);
 
@@ -113,22 +109,19 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-dialog" style={{ maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
+      <div className="modal-dialog" style={{ maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 600 }}>Focus Timer</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} className="text-indigo" />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Focus Pomodoro</h3>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <button 
               className="icon-btn" 
               onClick={() => setSoundEnabled(!soundEnabled)}
               title={soundEnabled ? 'Mute Chimes' : 'Enable Chimes'}
             >
-              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
             </button>
             <button className="icon-btn" onClick={onClose}>
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -164,32 +157,25 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
             </div>
 
             {/* Active Session Info */}
-            {activeSession ? (
-              <div style={{ marginBottom: '16px', maxWidth: '320px' }}>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--accent-primary)', fontWeight: 700 }}>
-                  Active Focus Task
+            {activeSession && (
+              <div style={{ marginBottom: '14px', maxWidth: '300px' }}>
+                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                  Current Task
                 </span>
-                <div style={{ fontWeight: 700, fontSize: '0.98rem', marginTop: '2px' }}>
+                <div style={{ fontWeight: 600, fontSize: '0.92rem', marginTop: '1px' }}>
                   {activeSession.topic}
                 </div>
               </div>
-            ) : null}
+            )}
 
-            {/* SVG Circular Ring */}
+            {/* Circular Ring */}
             <div className="timer-circle-wrapper">
-              <svg className="timer-svg" viewBox="0 0 240 240">
-                <defs>
-                  <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="50%" stopColor="#a855f7" />
-                    <stop offset="100%" stopColor="#ec4899" />
-                  </linearGradient>
-                </defs>
-                <circle className="timer-svg-bg" cx="120" cy="120" r={radius} />
+              <svg className="timer-svg" viewBox="0 0 220 220">
+                <circle className="timer-svg-bg" cx="110" cy="110" r={radius} />
                 <circle 
                   className="timer-svg-progress" 
-                  cx="120" 
-                  cy="120" 
+                  cx="110" 
+                  cy="110" 
                   r={radius}
                   style={{
                     strokeDasharray: circumference,
@@ -198,56 +184,56 @@ export default function PomodoroTimer({ isOpen, onClose, activeSession, onSessio
                 />
               </svg>
 
-              <div className="timer-digits-box">
+              <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div className="timer-digits">{timeFormatted}</div>
                 <div className="timer-mode-label">
-                  {mode === 'work' ? 'Deep Focus Session' : 'Restorative Break'}
+                  {mode === 'work' ? 'Focus Session' : 'Rest Break'}
                 </div>
               </div>
             </div>
 
-            {/* Timer Controls */}
-            <div className="timer-controls">
+            {/* Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               <button 
                 id="btn-timer-reset" 
-                className="btn btn-secondary icon-btn" 
-                style={{ width: '48px', height: '48px' }}
+                className="icon-btn" 
+                style={{ width: '40px', height: '40px' }}
                 onClick={handleReset} 
                 title="Reset timer"
               >
-                <RotateCcw size={18} />
+                <RotateCcw size={16} />
               </button>
               
               <button 
                 id="btn-timer-toggle" 
                 className="btn btn-primary" 
-                style={{ minWidth: '130px', padding: '12px 24px', fontSize: '1rem' }}
+                style={{ minWidth: '120px', padding: '9px 20px' }}
                 onClick={handleTogglePlay}
               >
                 {isRunning ? (
                   <>
-                    <Pause size={18} />
+                    <Pause size={15} />
                     <span>Pause</span>
                   </>
                 ) : (
                   <>
-                    <Play size={18} />
-                    <span>{secondsLeft === 0 ? 'Restart' : 'Start Focus'}</span>
+                    <Play size={15} />
+                    <span>{secondsLeft === 0 ? 'Restart' : 'Start'}</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Complete & Log Session Button */}
+            {/* Complete & Log Session */}
             {activeSession && (
               <button 
                 id="btn-timer-complete-session" 
-                className="btn btn-success" 
-                style={{ width: '100%', maxWidth: '320px', marginTop: '10px' }}
+                className="btn btn-secondary btn-sm" 
+                style={{ width: '100%', maxWidth: '280px' }}
                 onClick={handleLogComplete}
               >
-                <CheckCircle2 size={18} />
-                <span>Complete & Log Task</span>
+                <CheckCircle2 size={14} style={{ color: 'var(--color-success)' }} />
+                <span>Mark Task as Done</span>
               </button>
             )}
           </div>

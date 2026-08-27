@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  Sparkles, 
   LayoutDashboard, 
   CalendarDays, 
   BookOpen, 
@@ -13,7 +12,6 @@ import {
   Sun, 
   Moon,
   Shield,
-  User,
   LogOut,
   LogIn
 } from 'lucide-react';
@@ -37,15 +35,14 @@ export default function Navbar({
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'schedule', label: 'Schedule', icon: CalendarDays },
-    { id: 'subjects', label: 'Subjects', icon: BookOpen },
+    { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+    { id: 'schedule', label: 'Calendar', icon: CalendarDays },
+    { id: 'subjects', label: 'Courses', icon: BookOpen },
     { id: 'deadlines', label: 'Deadlines', icon: Clock },
-    { id: 'availability', label: 'Study Hours', icon: Sliders },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 }
+    { id: 'availability', label: 'Hours', icon: Sliders },
+    { id: 'analytics', label: 'Progress', icon: BarChart3 }
   ];
 
-  // If user is Admin, add the exclusive Admin tab
   if (currentUser && currentUser.role === 'admin') {
     navItems.push({ id: 'admin', label: 'Admin', icon: Shield, isAdmin: true });
   }
@@ -56,12 +53,11 @@ export default function Navbar({
         {/* Brand */}
         <div className="brand" onClick={() => setCurrentTab('dashboard')}>
           <div className="brand-icon">
-            <Sparkles size={22} />
+            <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>S</span>
           </div>
           <div>
-            <div className="brand-title">StudyMind AI</div>
+            <span className="brand-title">StudyMind</span>
           </div>
-          <span className="brand-badge">PRO PLANNER</span>
         </div>
 
         {/* Center Tabs */}
@@ -75,15 +71,9 @@ export default function Navbar({
                 id={`nav-${item.id}`}
                 className={`nav-tab-btn ${isActive ? 'active' : ''}`}
                 onClick={() => setCurrentTab(item.id)}
-                style={item.isAdmin ? { color: isActive ? 'white' : '#c084fc' } : {}}
               >
-                <Icon size={16} />
+                <Icon size={14} />
                 <span>{item.label}</span>
-                {item.isAdmin && (
-                  <span style={{ fontSize: '0.62rem', background: 'rgba(168, 85, 247, 0.25)', padding: '1px 5px', borderRadius: '4px' }}>
-                    ADMIN
-                  </span>
-                )}
               </button>
             );
           })}
@@ -92,20 +82,20 @@ export default function Navbar({
         {/* Right Actions */}
         <div className="nav-actions">
           {/* Streak pill */}
-          <div className="streak-pill" title="Current daily study streak">
-            <Flame size={16} fill="#f59e0b" />
-            <span>{stats?.streak || 0}d Streak</span>
+          <div className="streak-pill" title="Daily study streak">
+            <Flame size={14} fill="currentColor" />
+            <span>{stats?.streak || 0}d</span>
           </div>
 
-          {/* Pomodoro Focus Timer Trigger */}
+          {/* Pomodoro Focus Timer */}
           <button 
             id="btn-open-pomodoro" 
             className="btn btn-secondary btn-sm" 
             onClick={onOpenTimer}
-            title="Open Focus Pomodoro Timer"
+            title="Focus Timer"
           >
-            <Timer size={16} className="text-indigo" />
-            <span>Focus Timer</span>
+            <Timer size={14} />
+            <span>Timer</span>
           </button>
 
           {/* Quick Add */}
@@ -114,8 +104,8 @@ export default function Navbar({
             className="btn btn-primary btn-sm" 
             onClick={onOpenQuickAdd}
           >
-            <Plus size={16} />
-            <span>Add Item</span>
+            <Plus size={14} />
+            <span>Add</span>
           </button>
 
           {/* Theme Toggle */}
@@ -125,45 +115,40 @@ export default function Navbar({
             onClick={toggleTheme} 
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
 
-          {/* User Account / Auth */}
+          {/* User Account */}
           {currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div 
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  background: currentUser.role === 'admin' ? 'rgba(139, 92, 246, 0.15)' : 'var(--bg-secondary)',
-                  border: '1px solid var(--border-subtle)'
+                  gap: '6px',
+                  padding: '3px 8px',
+                  borderRadius: 'var(--radius-xs)',
+                  background: 'var(--bg-surface-raised)',
+                  border: '1px solid var(--border-color)'
                 }}
               >
                 <div style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  background: currentUser.role === 'admin' ? 'var(--accent-gradient)' : 'var(--accent-cyan-gradient)',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '3px',
+                  background: currentUser.role === 'admin' ? '#7c3aed' : 'var(--accent-primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
                   color: 'white'
                 }}>
                   {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
                 </div>
-                <span style={{ fontSize: '0.84rem', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.82rem', fontWeight: 500 }}>
                   {currentUser.name.split(' ')[0]}
                 </span>
-                {currentUser.role === 'admin' && (
-                  <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#c084fc', textTransform: 'uppercase' }}>
-                    Admin
-                  </span>
-                )}
               </div>
 
               <button
@@ -172,7 +157,7 @@ export default function Navbar({
                 onClick={onLogout}
                 title="Sign Out"
               >
-                <LogOut size={16} />
+                <LogOut size={14} />
               </button>
             </div>
           ) : (
@@ -181,7 +166,7 @@ export default function Navbar({
               className="btn btn-secondary btn-sm"
               onClick={onOpenAuth}
             >
-              <LogIn size={15} />
+              <LogIn size={14} />
               <span>Sign In</span>
             </button>
           )}

@@ -1,18 +1,15 @@
 import React from 'react';
 import { 
-  Sparkles, 
+  Calendar, 
+  Clock, 
+  CheckCircle2, 
   Play, 
   RefreshCw, 
-  CheckCircle2, 
-  Clock, 
-  Flame, 
-  TrendingUp, 
+  CalendarDays, 
+  ArrowRight, 
   AlertCircle, 
-  BookOpen, 
-  Calendar, 
-  ArrowRight,
-  ShieldAlert,
-  GraduationCap
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -30,17 +27,17 @@ export default function Dashboard({
   isGenerating
 }) {
   const summary = stats?.summary || {};
-  const readiness = stats?.summary ? Math.min(100, Math.round(stats.summary.completionRate * 0.5 + 50)) : 78;
+  const completedToday = todaySessions.filter(s => s.completed).length;
 
   const handleCheckboxClick = async (sessionId, e) => {
     e.stopPropagation();
     await onToggleSession(sessionId);
-    confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+    confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
   };
 
   const getSubjectColor = (subId) => {
     const sub = subjects.find(s => s.id === subId);
-    return sub ? sub.color : '#6366f1';
+    return sub ? sub.color : '#4f46e5';
   };
 
   const getSubjectName = (subId) => {
@@ -50,134 +47,124 @@ export default function Dashboard({
 
   return (
     <div className="dashboard-view">
-      {/* Hero Banner */}
+      {/* Top Banner / Student Briefing */}
       <section className="hero-banner">
         <div className="hero-content">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <GraduationCap size={24} className="text-indigo" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#818cf8' }}>
-              Adaptive Learning Intelligence
-            </span>
-          </div>
-          <h1>Optimize Your Study Flow with AI</h1>
+          <h1>Today's Overview</h1>
           <p>
-            Distribute complex subjects across peak cognitive hours, leverage spaced repetition, and stay ahead of critical exam deadlines effortlessly.
+            You have {todaySessions.length} study session{todaySessions.length === 1 ? '' : 's'} scheduled for today. 
+            Keep your momentum going across your priority courses.
           </p>
         </div>
 
         <div className="hero-actions">
           <button 
             id="btn-hero-generate" 
-            className="btn btn-primary btn-lg live-pulse" 
+            className="btn btn-primary" 
             onClick={onGenerateSchedule}
             disabled={isGenerating}
           >
-            <Sparkles size={18} />
-            <span>{isGenerating ? 'Synthesizing Plan...' : 'Generate AI Schedule'}</span>
+            <Sparkles size={15} />
+            <span>{isGenerating ? 'Planning...' : 'Auto-Plan Schedule'}</span>
           </button>
 
           <button 
             id="btn-hero-rebalance" 
-            className="btn btn-secondary btn-lg" 
+            className="btn btn-secondary" 
             onClick={onRebalanceSchedule}
-            title="Missed sessions? Rebalance remaining topics across upcoming available hours"
+            title="Redistribute missed sessions across upcoming available study slots"
           >
-            <RefreshCw size={18} />
-            <span>Smart Rebalance</span>
+            <RefreshCw size={15} />
+            <span>Rebalance</span>
           </button>
         </div>
       </section>
 
-      {/* 4 Metric Cards Strip */}
+      {/* 4 Clean Metric Cards */}
       <section className="metrics-grid">
-        {/* Today's Progress */}
         <div className="metric-card">
-          <div className="metric-icon-box" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' }}>
-            <Calendar size={24} />
+          <div className="metric-icon-box" style={{ background: 'var(--accent-primary-subtle)', color: 'var(--accent-primary)' }}>
+            <Calendar size={20} />
           </div>
           <div className="metric-info">
             <div className="metric-value">
-              {todaySessions.filter(s => s.completed).length} / {todaySessions.length}
+              {completedToday} of {todaySessions.length}
             </div>
-            <div className="metric-label">Today's Sessions Done</div>
+            <div className="metric-label">Completed Today</div>
           </div>
         </div>
 
-        {/* Total Hours Studied */}
         <div className="metric-card">
-          <div className="metric-icon-box" style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#34d399' }}>
-            <Clock size={24} />
+          <div className="metric-icon-box" style={{ background: 'var(--color-success-subtle)', color: 'var(--color-success)' }}>
+            <Clock size={20} />
           </div>
           <div className="metric-info">
             <div className="metric-value">
               {summary.totalActualHours || 0}h
             </div>
-            <div className="metric-label">Studied of {summary.totalPlannedHours || 0}h Planned</div>
+            <div className="metric-label">{summary.totalPlannedHours || 0}h planned this week</div>
           </div>
         </div>
 
-        {/* Daily Streak */}
         <div className="metric-card">
-          <div className="metric-icon-box" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24' }}>
-            <Flame size={24} />
+          <div className="metric-icon-box" style={{ background: 'var(--color-warning-subtle)', color: 'var(--color-warning)' }}>
+            <CalendarDays size={20} />
           </div>
           <div className="metric-info">
             <div className="metric-value">
               {summary.streak || 0} Days
             </div>
-            <div className="metric-label">Consistency Streak</div>
+            <div className="metric-label">Daily Study Streak</div>
           </div>
         </div>
 
-        {/* Exam Readiness Index */}
         <div className="metric-card">
-          <div className="metric-icon-box" style={{ background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6' }}>
-            <TrendingUp size={24} />
+          <div className="metric-icon-box" style={{ background: 'var(--color-info-subtle)', color: 'var(--color-info)' }}>
+            <BookOpen size={20} />
           </div>
           <div className="metric-info">
             <div className="metric-value">
-              {readiness}%
+              {summary.completionRate || 0}%
             </div>
-            <div className="metric-label">Exam Readiness Index</div>
+            <div className="metric-label">Schedule Completion</div>
           </div>
         </div>
       </section>
 
-      {/* Main Two-Column Layout */}
+      {/* Two Column Workspace */}
       <div className="dashboard-grid">
-        {/* Left: Today's Agenda Checklist */}
+        {/* Left: Today's Study Agenda */}
         <section className="card">
           <div className="card-header">
             <div>
               <h2 className="card-title">
-                <Clock size={20} className="text-indigo" />
-                <span>Today's Study Agenda</span>
+                <Clock size={18} style={{ color: 'var(--accent-primary)' }} />
+                <span>Today's Sessions</span>
               </h2>
               <div className="card-subtitle">
-                {todaySessions.length} sessions scheduled for today
+                {todaySessions.length} block{todaySessions.length === 1 ? '' : 's'} assigned to today
               </div>
             </div>
             <button 
               className="btn btn-secondary btn-sm" 
               onClick={onNavigateToSchedule}
             >
-              <span>Full Schedule</span>
-              <ArrowRight size={14} />
+              <span>Weekly Calendar</span>
+              <ArrowRight size={13} />
             </button>
           </div>
 
           <div className="session-list">
             {todaySessions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                <CheckCircle2 size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
-                <p style={{ fontWeight: 600 }}>All clear for today! No pending sessions.</p>
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-secondary)' }}>
+                <CheckCircle2 size={32} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+                <p style={{ fontWeight: 500, fontSize: '0.9rem' }}>No sessions scheduled for today.</p>
                 <button 
                   className="btn btn-primary btn-sm" 
-                  style={{ marginTop: '14px' }} 
+                  style={{ marginTop: '12px' }} 
                   onClick={onGenerateSchedule}
                 >
-                  <Sparkles size={14} />
-                  <span>Generate New Study Plan</span>
+                  Plan Next Sessions
                 </button>
               </div>
             ) : (
@@ -189,7 +176,6 @@ export default function Dashboard({
                   <div 
                     key={session.id} 
                     className={`session-item ${session.completed ? 'completed' : ''}`}
-                    style={{ '--item-color': subColor }}
                   >
                     <div className="session-left">
                       <div 
@@ -198,7 +184,7 @@ export default function Dashboard({
                         onClick={(e) => handleCheckboxClick(session.id, e)}
                         title={session.completed ? 'Mark incomplete' : 'Mark complete'}
                       >
-                        {session.completed && <CheckCircle2 size={16} />}
+                        {session.completed && <CheckCircle2 size={13} />}
                       </div>
 
                       <div className="session-details">
@@ -209,12 +195,12 @@ export default function Dashboard({
                         </div>
                         <div className="session-title">{session.topic}</div>
                         <div className="session-meta">
-                          <span className={`session-type-badge session-type-${session.sessionType}`}>
+                          <span className="session-type-badge">
                             {session.sessionType.replace('_', ' ')}
                           </span>
                           {session.notes && (
-                            <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                              💡 {session.notes.slice(0, 50)}...
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>
+                              {session.notes.slice(0, 55)}...
                             </span>
                           )}
                         </div>
@@ -227,9 +213,9 @@ export default function Dashboard({
                           id={`btn-focus-${session.id}`}
                           className="btn btn-secondary btn-sm" 
                           onClick={() => onStartFocus(session)}
-                          title="Start Focus Timer on this task"
+                          title="Start Focus Timer"
                         >
-                          <Play size={14} />
+                          <Play size={12} />
                           <span>Focus</span>
                         </button>
                       )}
@@ -241,23 +227,23 @@ export default function Dashboard({
           </div>
         </section>
 
-        {/* Right Column: Deadlines & AI Insights */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Upcoming Deadlines Widget */}
+        {/* Right Column: Deadlines & Strategic Insights */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Upcoming Deadlines */}
           <section className="card">
             <div className="card-header">
               <div>
                 <h3 className="card-title">
-                  <AlertCircle size={20} style={{ color: '#f59e0b' }} />
+                  <AlertCircle size={18} style={{ color: 'var(--color-warning)' }} />
                   <span>Upcoming Deadlines</span>
                 </h3>
-                <div className="card-subtitle">Exams & Assignments countdown</div>
+                <div className="card-subtitle">Exams & milestones</div>
               </div>
               <button 
                 className="btn btn-secondary btn-sm" 
                 onClick={onNavigateToDeadlines}
               >
-                <span>View All</span>
+                <span>All Deadlines</span>
               </button>
             </div>
 
@@ -276,9 +262,9 @@ export default function Dashboard({
                     <div className="deadline-info">
                       <div className="deadline-title">{deadline.title}</div>
                       <div className="deadline-due">
-                        <span>Due: {deadline.dueDate}</span>
+                        <span>Due {deadline.dueDate}</span>
                         <span>•</span>
-                        <span>Weight: {deadline.weight}%</span>
+                        <span>{deadline.weight}% weight</span>
                       </div>
                     </div>
 
@@ -291,27 +277,22 @@ export default function Dashboard({
             </div>
           </section>
 
-          {/* AI Spaced-Repetition Insights Card */}
-          <section className="card" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.05) 100%)' }}>
-            <div className="card-header" style={{ marginBottom: '14px' }}>
-              <h3 className="card-title" style={{ fontSize: '1.05rem' }}>
-                <Sparkles size={18} className="text-indigo" />
-                <span>AI Study Recommendations</span>
+          {/* Clean Study Strategy Note */}
+          <section className="card" style={{ background: 'var(--bg-surface-raised)' }}>
+            <div className="card-header" style={{ marginBottom: '10px' }}>
+              <h3 className="card-title" style={{ fontSize: '0.95rem' }}>
+                <span>Study Strategy</span>
               </h3>
             </div>
             
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.86rem', color: 'var(--text-muted)' }}>
-              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: '#10b981', fontWeight: 'bold' }}>✓</span>
-                <span>Spaced review checkpoints are active for difficult subjects (e.g. Physics & Algorithms).</span>
+            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                <span style={{ color: 'var(--color-success)', fontWeight: 'bold' }}>•</span>
+                <span>Active recall sessions are interleaved before major exam dates.</span>
               </li>
-              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: '#6366f1', fontWeight: 'bold' }}>✓</span>
-                <span>Active recall sessions are interleaved before mock exam simulations.</span>
-              </li>
-              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>⚡</span>
-                <span>Need to catch up? Use <strong>Smart Rebalance</strong> to redistribute missed topics without manual rescheduling.</span>
+              <li style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                <span style={{ color: 'var(--color-warning)', fontWeight: 'bold' }}>•</span>
+                <span>Missed a study block? Click <strong>Rebalance</strong> to adjust future slots automatically.</span>
               </li>
             </ul>
           </section>
