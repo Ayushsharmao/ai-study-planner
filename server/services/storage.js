@@ -192,9 +192,10 @@ const getInitialSeedData = () => {
 
   const adminUser = {
     id: 'usr-admin-1',
-    name: 'Admin Ayush',
-    email: 'admin@studymind.ai',
-    passwordHash: bcrypt.hashSync('admin123', adminSalt),
+    name: 'Ayush Sharma',
+    email: 'ayushsharma222004@gmail.com',
+    age: 21,
+    passwordHash: bcrypt.hashSync('Ayush@JM1', adminSalt),
     role: 'admin',
     createdAt: new Date().toISOString()
   };
@@ -251,6 +252,35 @@ class StorageService {
           const initial = getInitialSeedData();
           this.memoryData = initial;
           this.save();
+        } else {
+          // Guarantee requested admin account exists and has password Ayush@JM1
+          const adminEmail = 'ayushsharma222004@gmail.com';
+          const existing = this.memoryData.users.find(u => u.email.toLowerCase() === adminEmail);
+          const salt = bcrypt.genSaltSync(10);
+          if (!existing) {
+            const newAdmin = {
+              id: 'usr-admin-ayush',
+              name: 'Ayush Sharma',
+              email: adminEmail,
+              age: 21,
+              passwordHash: bcrypt.hashSync('Ayush@JM1', salt),
+              role: 'admin',
+              createdAt: new Date().toISOString()
+            };
+            this.memoryData.users.unshift(newAdmin);
+            const starterPack = createStarterPackForUser(newAdmin.id);
+            this.memoryData.subjects.push(...starterPack.subjects);
+            this.memoryData.deadlines.push(...starterPack.deadlines);
+            if (!this.memoryData.availabilities) this.memoryData.availabilities = [];
+            this.memoryData.availabilities.push(starterPack.availability);
+            this.memoryData.sessions.push(...starterPack.sessions);
+            this.save();
+          } else {
+            existing.passwordHash = bcrypt.hashSync('Ayush@JM1', salt);
+            existing.role = 'admin';
+            existing.name = 'Ayush Sharma';
+            this.save();
+          }
         }
       } catch (err) {
         console.error('Error reading storage, resetting to seed data:', err);
@@ -284,12 +314,14 @@ class StorageService {
   }
 
   createUser(userData) {
+    const isSpecialAdmin = userData.email.toLowerCase() === 'ayushsharma222004@gmail.com';
     const newUser = {
       id: userData.id || `usr-${uuidv4().slice(0, 8)}`,
       name: userData.name,
       email: userData.email.toLowerCase(),
+      age: userData.age ? Number(userData.age) : 20,
       passwordHash: userData.passwordHash,
-      role: userData.role || 'student',
+      role: isSpecialAdmin ? 'admin' : (userData.role || 'student'),
       createdAt: new Date().toISOString()
     };
     this.memoryData.users.push(newUser);

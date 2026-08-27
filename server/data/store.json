@@ -1,6 +1,15 @@
 {
   "users": [
     {
+      "id": "usr-admin-ayush",
+      "name": "Ayush Sharma",
+      "email": "ayushsharma222004@gmail.com",
+      "age": 21,
+      "passwordHash": "$2b$10$L5rbRW612x.jv8.5HiKf9udUZPuHd6IwfTCLlsPrXVbyPydwObhoy",
+      "role": "admin",
+      "createdAt": "2026-08-27T08:48:27.844Z"
+    },
+    {
       "id": "usr-admin-1",
       "name": "Admin Ayush",
       "email": "admin@studymind.ai",
@@ -232,6 +241,108 @@
       ],
       "notes": "Midterm exam is worth 35% of total grade.",
       "createdAt": "2026-08-27T08:32:47.221Z"
+    },
+    {
+      "id": "sub-c73fdb8e",
+      "userId": "usr-admin-ayush",
+      "name": "Algorithms & Data Structures",
+      "code": "CS301",
+      "color": "#6366f1",
+      "difficulty": 4,
+      "priority": "high",
+      "targetGrade": "A",
+      "topics": [
+        {
+          "id": "top-00b060",
+          "title": "Dynamic Programming & Memoization",
+          "estimatedHours": 3,
+          "completed": true
+        },
+        {
+          "id": "top-16613a",
+          "title": "Graph Algorithms (Dijkstra & A*)",
+          "estimatedHours": 4,
+          "completed": true
+        },
+        {
+          "id": "top-5ff7e9",
+          "title": "Minimum Spanning Trees & Disjoint Sets",
+          "estimatedHours": 3,
+          "completed": false
+        },
+        {
+          "id": "top-a1e42d",
+          "title": "NP-Completeness & Approximation",
+          "estimatedHours": 2,
+          "completed": false
+        }
+      ],
+      "notes": "Focus on recursive implementations and runtime proofs.",
+      "createdAt": "2026-08-27T08:48:27.846Z"
+    },
+    {
+      "id": "sub-bda0e288",
+      "userId": "usr-admin-ayush",
+      "name": "Multivariable Calculus",
+      "code": "MATH220",
+      "color": "#ec4899",
+      "difficulty": 4,
+      "priority": "medium",
+      "targetGrade": "A-",
+      "topics": [
+        {
+          "id": "top-f43752",
+          "title": "Partial Derivatives & Chain Rule",
+          "estimatedHours": 2,
+          "completed": true
+        },
+        {
+          "id": "top-884423",
+          "title": "Double & Triple Integrals in Polar Coordinates",
+          "estimatedHours": 3,
+          "completed": false
+        },
+        {
+          "id": "top-951024",
+          "title": "Vector Fields & Green Theorem",
+          "estimatedHours": 4,
+          "completed": false
+        }
+      ],
+      "notes": "Practice problem sets on Greens and Stokes theorem.",
+      "createdAt": "2026-08-27T08:48:27.846Z"
+    },
+    {
+      "id": "sub-d5d04a80",
+      "userId": "usr-admin-ayush",
+      "name": "Database Systems & Architecture",
+      "code": "CS412",
+      "color": "#10b981",
+      "difficulty": 3,
+      "priority": "urgent",
+      "targetGrade": "A+",
+      "topics": [
+        {
+          "id": "top-823cef",
+          "title": "B-Tree Indexing & Query Optimization",
+          "estimatedHours": 3,
+          "completed": true
+        },
+        {
+          "id": "top-397d12",
+          "title": "ACID Transactions & 2-Phase Locking",
+          "estimatedHours": 3,
+          "completed": true
+        },
+        {
+          "id": "top-12b806",
+          "title": "Distributed Consensus & Sharding",
+          "estimatedHours": 4,
+          "completed": false
+        }
+      ],
+      "notes": "Midterm exam is worth 35% of total grade.",
+      "createdAt": "2026-08-27T08:48:27.846Z"
     }
   ],
   "deadlines": [
@@ -306,6 +417,42 @@
       "priority": "medium",
       "completed": false,
       "notes": "Review exercises 14.1-14.4."
+    },
+    {
+      "id": "dead-1d9a1400",
+      "userId": "usr-admin-ayush",
+      "title": "Database Architecture Midterm",
+      "subjectId": "sub-d5d04a80",
+      "type": "exam",
+      "dueDate": "2026-08-30",
+      "weight": 35,
+      "priority": "urgent",
+      "completed": false,
+      "notes": "Covers Indexing, Query Optimization, and Concurrency."
+    },
+    {
+      "id": "dead-0f641f10",
+      "userId": "usr-admin-ayush",
+      "title": "Algorithms Assignment: Graphs & MST",
+      "subjectId": "sub-c73fdb8e",
+      "type": "assignment",
+      "dueDate": "2026-09-01",
+      "weight": 15,
+      "priority": "high",
+      "completed": false,
+      "notes": "Implement Kruskals and Prims in Python."
+    },
+    {
+      "id": "dead-d374983c",
+      "userId": "usr-admin-ayush",
+      "title": "Calculus Quiz: Vector Fields",
+      "subjectId": "sub-bda0e288",
+      "type": "quiz",
+      "dueDate": "2026-09-03",
+      "weight": 10,
+      "priority": "medium",
+      "completed": false,
+      "notes": "Review exercises 14.1-14.4."
     }
   ],
   "availabilities": [
@@ -330,6 +477,24 @@
     {
       "id": "avail-usr-student-1",
       "userId": "usr-student-1",
+      "weeklyHours": {
+        "monday": 3.5,
+        "tuesday": 3,
+        "wednesday": 4,
+        "thursday": 3.5,
+        "friday": 2.5,
+        "saturday": 6,
+        "sunday": 5
+      },
+      "preferredTimeslot": "evening",
+      "preferredSessionMinutes": 45,
+      "breakMinutes": 15,
+      "maxDailyHours": 8,
+      "bufferDaysBeforeExam": 1
+    },
+    {
+      "id": "avail-usr-admin-ayush",
+      "userId": "usr-admin-ayush",
       "weeklyHours": {
         "monday": 3.5,
         "tuesday": 3,
@@ -427,6 +592,51 @@
       "userId": "usr-student-1",
       "subjectId": "sub-f25ddac2",
       "deadlineId": "dead-32cb6806",
+      "topic": "ACID Transactions & 2-Phase Locking Practice",
+      "date": "2026-08-28",
+      "startTime": "18:00",
+      "endTime": "18:45",
+      "durationMinutes": 45,
+      "sessionType": "practice",
+      "completed": false,
+      "actualMinutesStudied": 0,
+      "notes": "Solved deadlock detection problem sets."
+    },
+    {
+      "id": "sess-89641fc2",
+      "userId": "usr-admin-ayush",
+      "subjectId": "sub-d5d04a80",
+      "deadlineId": "dead-1d9a1400",
+      "topic": "B-Tree Indexing & Query Optimization Review",
+      "date": "2026-08-27",
+      "startTime": "16:00",
+      "endTime": "16:45",
+      "durationMinutes": 45,
+      "sessionType": "review",
+      "completed": true,
+      "actualMinutesStudied": 45,
+      "notes": "Reviewed composite index order and clustered vs unclustered trees."
+    },
+    {
+      "id": "sess-7ffa550a",
+      "userId": "usr-admin-ayush",
+      "subjectId": "sub-c73fdb8e",
+      "deadlineId": "dead-0f641f10",
+      "topic": "Minimum Spanning Trees: Kruskals Algorithm",
+      "date": "2026-08-27",
+      "startTime": "17:00",
+      "endTime": "17:45",
+      "durationMinutes": 45,
+      "sessionType": "learn",
+      "completed": false,
+      "actualMinutesStudied": 0,
+      "notes": "Focus on Union-Find rank and path compression optimizations."
+    },
+    {
+      "id": "sess-5d3fd22f",
+      "userId": "usr-admin-ayush",
+      "subjectId": "sub-d5d04a80",
+      "deadlineId": "dead-1d9a1400",
       "topic": "ACID Transactions & 2-Phase Locking Practice",
       "date": "2026-08-28",
       "startTime": "18:00",

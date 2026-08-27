@@ -64,11 +64,22 @@ export async function login(email, password) {
   return data;
 }
 
-export async function register(name, email, password) {
+export async function register(name, email, password, age) {
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password })
+    body: JSON.stringify({ name, email, password, age: Number(age) || 20 })
+  });
+  const data = await handleResponse(res);
+  setAuthToken(data.token);
+  return data;
+}
+
+export async function googleAuth(email, name, age) {
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, name, age: Number(age) || 20 })
   });
   const data = await handleResponse(res);
   setAuthToken(data.token);

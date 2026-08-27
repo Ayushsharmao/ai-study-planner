@@ -4,6 +4,7 @@ export const UserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
+  age: { type: Number, default: 20 },
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
   createdAt: { type: Date, default: Date.now }

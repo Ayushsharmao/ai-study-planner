@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
-import { Sparkles, Lock, Mail, User, Shield, ArrowRight, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lock, Mail, User, ArrowRight, X, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import * as api from '../services/api';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
   const [name, setName] = useState('');
+  const [age, setAge] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Load remembered email on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('studymind_remembered_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -23,8 +34,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       if (mode === 'login') {
         res = await api.login(email, password);
       } else {
-        res = await api.register(name, email, password);
+        if (!age || Number(age) < 10) {
+          throw new Error('Please enter a valid age (10 or older).');
+        }
+        res = await api.register(name, email, password, age);
         confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+      }
+
+      // Handle Remember Me
+      if (rememberMe) {
+        localStorage.setItem('studymind_remembered_email', email);
+      } else {
+        localStorage.removeItem('studymind_remembered_email');
       }
 
       onAuthSuccess(res.user);
@@ -36,29 +57,21 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     }
   };
 
-  const handleDemoAdmin = async () => {
-    setEmail('admin@studymind.ai');
-    setPassword('admin123');
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await api.login('admin@studymind.ai', 'admin123');
-      onAuthSuccess(res.user);
-      onClose();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Google Sign-In Simulation / Flow
+  const handleGoogleSignIn = async () => {
+    const googleEmail = prompt('Enter your Google / Gmail address:', email || 'ayushsharma222004@gmail.com');
+    if (!googleEmail || !googleEmail.includes('@')) return;
 
-  const handleDemoStudent = async () => {
-    setEmail('alex@student.com');
-    setPassword('student123');
-    setError(null);
+    const googleName = prompt('Enter your display name:', name || googleEmail.split('@')[0]);
+
     setLoading(true);
+    setError(null);
     try {
-      const res = await api.login('alex@student.com', 'student123');
+      const res = await api.googleAuth(googleEmail, googleName, age || 20);
+      if (rememberMe) {
+        localStorage.setItem('studymind_remembered_email', googleEmail);
+      }
+      confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
       onAuthSuccess(res.user);
       onClose();
     } catch (err) {
@@ -72,19 +85,19 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-dialog" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div className="brand-icon" style={{ width: '32px', height: '32px', borderRadius: '8px' }}>
-              <Sparkles size={16} />
-            </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>
-              {mode === 'login' ? 'Sign In to StudyMind' : 'Create Student Account'}
+          <div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>
+              {mode === 'login' ? 'Sign In to StudyMind' : 'Create an Account'}
             </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              {mode === 'login' ? 'Access your private study schedule' : 'Start organizing your courses and exam schedule'}
+            </p>
           </div>
-          <button className="icon-btn" onClick={onClose}><X size={18} /></button>
+          <button className="icon-btn" onClick={onClose}><X size={16} /></button>
         </div>
 
-        {/* Tab switch */}
-        <div style={{ padding: '16px 24px 0', display: 'flex', gap: '8px' }}>
+        {/* Tab Switcher */}
+        <div style={{ padding: '16px 20px 0' }}>
           <div className="timer-presets" style={{ width: '100%', margin: 0 }}>
             <button
               id="tab-auth-login"
@@ -105,46 +118,116 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ paddingTop: '16px' }}>
-            {error && (
-              <div style={{
-                background: 'rgba(244, 63, 94, 0.12)',
-                border: '1px solid rgba(244, 63, 94, 0.3)',
-                color: '#fb7185',
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '0.85rem',
-                marginBottom: '16px'
-              }}>
-                {error}
-              </div>
-            )}
+        <div className="modal-body" style={{ paddingTop: '16px' }}>
+          {error && (
+            <div style={{
+              background: 'var(--color-danger-subtle)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: 'var(--color-danger)',
+              padding: '10px 12px',
+              borderRadius: 'var(--radius-xs)',
+              fontSize: '0.82rem',
+              marginBottom: '14px'
+            }}>
+              {error}
+            </div>
+          )}
 
+          {/* Google Sign In Button */}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ 
+              width: '100%', 
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              fontWeight: 600,
+              fontSize: '0.88rem',
+              padding: '10px 14px'
+            }}
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+          >
+            {/* Google G SVG */}
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '10px', 
+            margin: '12px 0 16px',
+            color: 'var(--text-tertiary)',
+            fontSize: '0.78rem'
+          }}>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+            <span>or continue with email</span>
+            <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+          </div>
+
+          <form onSubmit={handleSubmit}>
             {mode === 'register' && (
-              <div className="form-group">
-                <label className="form-label">Your Name</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    id="input-auth-name"
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Ayush Sharma"
-                    required
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                  />
+              <>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Full Name *</label>
+                    <input
+                      id="input-auth-name"
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Ayush Sharma"
+                      required
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Age *</label>
+                    <input
+                      id="input-auth-age"
+                      type="number"
+                      min="10"
+                      max="100"
+                      className="form-input"
+                      placeholder="e.g. 21"
+                      required
+                      value={age}
+                      onChange={e => setAge(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">Gmail / Email Address *</label>
               <input
                 id="input-auth-email"
                 type="email"
                 className="form-input"
-                placeholder="name@university.edu"
+                placeholder="name@gmail.com"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -152,7 +235,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Password</label>
+              <label className="form-label">Password *</label>
               <input
                 id="input-auth-password"
                 type="password"
@@ -164,47 +247,38 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               />
             </div>
 
+            {/* Remember Me Checkbox */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              margin: '10px 0 16px',
+              fontSize: '0.82rem',
+              color: 'var(--text-secondary)'
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  id="checkbox-remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                />
+                <span>Remember my credentials</span>
+              </label>
+            </div>
+
             <button
               id="btn-auth-submit"
               type="submit"
               className="btn btn-primary"
-              style={{ width: '100%', marginTop: '10px' }}
+              style={{ width: '100%', padding: '10px' }}
               disabled={loading}
             >
-              <span>{loading ? 'Authenticating...' : mode === 'login' ? 'Sign In' : 'Create Account'}</span>
-              <ArrowRight size={16} />
+              <span>{loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}</span>
+              <ArrowRight size={15} />
             </button>
-
-            {/* Quick Demo Logins */}
-            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                Instant Preview Options:
-              </div>
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                <button
-                  id="btn-demo-admin"
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={handleDemoAdmin}
-                  title="Sign in as Administrator with full site settings & user management access"
-                >
-                  <Shield size={14} style={{ color: '#8b5cf6' }} />
-                  <span>Admin Login</span>
-                </button>
-                <button
-                  id="btn-demo-student"
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={handleDemoStudent}
-                  title="Sign in as regular Student"
-                >
-                  <User size={14} style={{ color: '#06b6d4' }} />
-                  <span>Student Login</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

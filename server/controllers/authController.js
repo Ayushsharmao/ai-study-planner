@@ -4,7 +4,7 @@ import { generateToken } from '../middleware/auth.js';
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, age } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, error: 'Name, email, and password are required' });
@@ -14,23 +14,26 @@ export const register = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
     }
 
-    const existing = storage.getUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = storage.getUserByEmail(cleanEmail);
     if (existing) {
-      return res.status(400).json({ success: false, error: 'An account with this email already exists' });
+      return res.status(400).json({ success: false, error: 'An account with this email already exists. Please sign in.' });
     }
 
     // Hash password
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(password, salt);
 
-    // If no admin exists yet, or if email starts with 'admin@', make admin
-    const allUsers = storage.getUsers();
-    const isFirstUser = allUsers.length === 0;
-    const role = (isFirstUser || email.toLowerCase().includes('admin')) ? 'admin' : 'student';
+    // Designated master admin
+    const isAdminEmail = cleanEmail === 'ayushsharma222004@gmail.com';
+    const role = isAdminEmail ? 'admin' : 'student';
+
+    const parsedAge = age ? parseInt(age, 10) : 20;
 
     const newUser = storage.createUser({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
+      age: parsedAge,
       passwordHash,
       role
     });
@@ -44,6 +47,7 @@ export const register = async (req, res) => {
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
+        age: newUser.age,
         role: newUser.role
       }
     });
@@ -61,7 +65,8 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Email and password are required' });
     }
 
-    const user = storage.getUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    const user = storage.getUserByEmail(cleanEmail);
     if (!user) {
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
@@ -80,11 +85,57 @@ export const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        age: user.age,
         role: user.role
       }
     });
   } catch (err) {
     console.error('Login error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { email, name, age } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required for Google Sign-In' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    let user = storage.getUserByEmail(cleanEmail);
+
+    if (!user) {
+      // Auto-register via Google
+      const salt = bcrypt.genSaltSync(10);
+      const randomPassword = Math.random().toString(36).slice(-10);
+      const passwordHash = bcrypt.hashSync(randomPassword, salt);
+      const isAdmin = cleanEmail === 'ayushsharma222004@gmail.com';
+
+      user = storage.createUser({
+        name: name || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        age: age ? parseInt(age, 10) : 20,
+        passwordHash,
+        role: isAdmin ? 'admin' : 'student'
+      });
+    }
+
+    const token = generateToken(user);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error('Google Auth error:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 };
@@ -102,6 +153,7 @@ export const getMe = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        age: user.age,
         role: user.role,
         createdAt: user.createdAt
       }

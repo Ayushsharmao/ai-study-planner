@@ -33,6 +33,7 @@ router.get('/public-settings', (req, res) => {
 // Auth Routes (public)
 router.post('/auth/register', authCtrl.register);
 router.post('/auth/login', authCtrl.login);
+router.post('/auth/google', authCtrl.googleAuth);
 router.get('/auth/me', requireAuth, authCtrl.getMe);
 
 // Admin Routes (protected: requireAuth + requireAdmin)
