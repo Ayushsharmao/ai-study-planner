@@ -322,6 +322,9 @@ class StorageService {
       age: userData.age ? Number(userData.age) : 20,
       passwordHash: userData.passwordHash,
       role: isSpecialAdmin ? 'admin' : (userData.role || 'student'),
+      authProvider: userData.authProvider || 'email',
+      picture: userData.picture || '',
+      lastLoginAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
     this.memoryData.users.push(newUser);
@@ -335,6 +338,15 @@ class StorageService {
 
     this.save();
     return newUser;
+  }
+
+  updateUserLastLogin(userId) {
+    const user = this.getUserById(userId);
+    if (user) {
+      user.lastLoginAt = new Date().toISOString();
+      this.save();
+    }
+    return user;
   }
 
   deleteUser(userId) {

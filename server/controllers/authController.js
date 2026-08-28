@@ -2,6 +2,19 @@ import bcrypt from 'bcryptjs';
 import { storage } from '../services/storage.js';
 import { generateToken } from '../middleware/auth.js';
 
+function decodeGoogleJwt(credential) {
+  try {
+    if (!credential || typeof credential !== 'string') return null;
+    const parts = credential.split('.');
+    if (parts.length < 2) return null;
+    const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonStr = Buffer.from(payloadBase64, 'base64').toString('utf8');
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    return null;
+  }
+}
+
 export const register = async (req, res) => {
   try {
     const { name, email, password, age } = req.body;
@@ -35,6 +48,7 @@ export const register = async (req, res) => {
       email: cleanEmail,
       age: parsedAge,
       passwordHash,
+      authProvider: 'email',
       role
     });
 
@@ -48,7 +62,9 @@ export const register = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         age: newUser.age,
-        role: newUser.role
+        role: newUser.role,
+        authProvider: newUser.authProvider,
+        createdAt: newUser.createdAt
       }
     });
   } catch (err) {
@@ -76,6 +92,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
+    storage.updateUserLastLogin(user.id);
     const token = generateToken(user);
 
     res.json({
@@ -86,7 +103,10 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         age: user.age,
-        role: user.role
+        role: user.role,
+        authProvider: user.authProvider || 'email',
+        picture: user.picture || '',
+        createdAt: user.createdAt
       }
     });
   } catch (err) {
@@ -97,28 +117,47 @@ export const login = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
   try {
-    const { email, name, age } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, error: 'Email is required for Google Sign-In' });
+    const { credential, email, name, picture, age } = req.body;
+    let userEmail = email;
+    let userName = name;
+    let userPicture = picture || '';
+
+    // If official Google Identity Services credential was passed, decode it
+    if (credential) {
+      const decoded = decodeGoogleJwt(credential);
+      if (decoded && decoded.email) {
+        userEmail = decoded.email;
+        userName = decoded.name || decoded.given_name || userEmail.split('@')[0];
+        userPicture = decoded.picture || '';
+      }
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    if (!userEmail) {
+      return res.status(400).json({ success: false, error: 'Valid Google email is required' });
+    }
+
+    const cleanEmail = userEmail.trim().toLowerCase();
     let user = storage.getUserByEmail(cleanEmail);
 
     if (!user) {
-      // Auto-register via Google
+      // Auto-register new Google user with private starter course pack
       const salt = bcrypt.genSaltSync(10);
       const randomPassword = Math.random().toString(36).slice(-10);
       const passwordHash = bcrypt.hashSync(randomPassword, salt);
       const isAdmin = cleanEmail === 'ayushsharma222004@gmail.com';
 
       user = storage.createUser({
-        name: name || cleanEmail.split('@')[0],
+        name: userName || cleanEmail.split('@')[0],
         email: cleanEmail,
         age: age ? parseInt(age, 10) : 20,
         passwordHash,
+        authProvider: 'google',
+        picture: userPicture,
         role: isAdmin ? 'admin' : 'student'
       });
+    } else {
+      if (userPicture && !user.picture) user.picture = userPicture;
+      storage.updateUserLastLogin(user.id);
     }
 
     const token = generateToken(user);
@@ -131,7 +170,10 @@ export const googleAuth = async (req, res) => {
         name: user.name,
         email: user.email,
         age: user.age,
-        role: user.role
+        role: user.role,
+        authProvider: user.authProvider || 'google',
+        picture: user.picture || '',
+        createdAt: user.createdAt
       }
     });
   } catch (err) {
@@ -155,6 +197,8 @@ export const getMe = async (req, res) => {
         email: user.email,
         age: user.age,
         role: user.role,
+        authProvider: user.authProvider || 'email',
+        picture: user.picture || '',
         createdAt: user.createdAt
       }
     });

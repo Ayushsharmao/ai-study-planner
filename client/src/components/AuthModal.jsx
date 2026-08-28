@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Mail, User, ArrowRight, X, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import * as api from '../services/api';
@@ -13,6 +13,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const googleBtnRef = useRef(null);
+
   // Load remembered email on mount
   useEffect(() => {
     const savedEmail = localStorage.getItem('studymind_remembered_email');
@@ -21,6 +23,56 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       setRememberMe(true);
     }
   }, [isOpen]);
+
+  // Initialize official Google Identity Services
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (window.google?.accounts?.id && clientId) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+
+        if (googleBtnRef.current) {
+          window.google.accounts.id.renderButton(googleBtnRef.current, {
+            theme: 'outline',
+            size: 'large',
+            width: 380,
+            text: 'continue_with',
+            shape: 'rectangular',
+            logo_alignment: 'left'
+          });
+        }
+      } catch (err) {
+        console.warn('Google Identity Services init notice:', err);
+      }
+    }
+  }, [isOpen]);
+
+  const handleGoogleCredentialResponse = async (response) => {
+    if (!response || !response.credential) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.googleAuth({ credential: response.credential });
+      if (rememberMe && res.user?.email) {
+        localStorage.setItem('studymind_remembered_email', res.user.email);
+      }
+      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+      onAuthSuccess(res.user);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -57,8 +109,25 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     }
   };
 
-  // Google Sign-In Simulation / Flow
-  const handleGoogleSignIn = async () => {
+  // Google Sign-In Trigger
+  const handleGoogleSignInClick = async () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    
+    // If Google Identity SDK is loaded and configured, prompt One Tap / Popup
+    if (window.google?.accounts?.id && clientId) {
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // Fallback if One Tap is dismissed
+          triggerGoogleManualPrompt();
+        }
+      });
+    } else {
+      // Fallback for immediate sign-in
+      triggerGoogleManualPrompt();
+    }
+  };
+
+  const triggerGoogleManualPrompt = async () => {
     const googleEmail = prompt('Enter your Google / Gmail address:', email || '');
     if (!googleEmail || !googleEmail.includes('@')) return;
 
@@ -67,7 +136,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.googleAuth(googleEmail, googleName, age || 20);
+      const res = await api.googleAuth({
+        email: googleEmail,
+        name: googleName,
+        age: age ? Number(age) : 20
+      });
       if (rememberMe) {
         localStorage.setItem('studymind_remembered_email', googleEmail);
       }
@@ -133,7 +206,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             </div>
           )}
 
-          {/* Google Sign In Button */}
+          {/* Official Google Identity Button Mount Target */}
+          <div ref={googleBtnRef} style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}></div>
+
+          {/* Fallback & Direct Google Sign In Button */}
           <button
             type="button"
             className="btn btn-secondary"
@@ -148,7 +224,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               fontSize: '0.88rem',
               padding: '10px 14px'
             }}
-            onClick={handleGoogleSignIn}
+            onClick={handleGoogleSignInClick}
             disabled={loading}
           >
             {/* Google G SVG */}
@@ -263,7 +339,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   checked={rememberMe}
                   onChange={e => setRememberMe(e.target.checked)}
                 />
-                <span>Remember my credentials</span>
+                <span>Remember my login</span>
               </label>
             </div>
 

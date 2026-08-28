@@ -7,6 +7,9 @@ export const UserSchema = new mongoose.Schema({
   age: { type: Number, default: 20 },
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
+  authProvider: { type: String, default: 'email' },
+  picture: { type: String, default: '' },
+  lastLoginAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });
 

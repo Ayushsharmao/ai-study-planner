@@ -2,16 +2,29 @@ const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` 
   : '/api';
 
-// Token Management
+// Token & User Session Management
 export function getAuthToken() {
   return localStorage.getItem('studymind_token') || '';
 }
 
-export function setAuthToken(token) {
+export function getSavedUser() {
+  try {
+    const raw = localStorage.getItem('studymind_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setAuthToken(token, user = null) {
   if (token) {
     localStorage.setItem('studymind_token', token);
+    if (user) {
+      localStorage.setItem('studymind_user', JSON.stringify(user));
+    }
   } else {
     localStorage.removeItem('studymind_token');
+    localStorage.removeItem('studymind_user');
   }
 }
 
@@ -60,7 +73,7 @@ export async function login(email, password) {
     body: JSON.stringify({ email, password })
   });
   const data = await handleResponse(res);
-  setAuthToken(data.token);
+  setAuthToken(data.token, data.user);
   return data;
 }
 
@@ -71,18 +84,23 @@ export async function register(name, email, password, age) {
     body: JSON.stringify({ name, email, password, age: Number(age) || 20 })
   });
   const data = await handleResponse(res);
-  setAuthToken(data.token);
+  setAuthToken(data.token, data.user);
   return data;
 }
 
-export async function googleAuth(email, name, age) {
+export async function googleAuth(authPayload) {
+  // Can receive either { credential } or { email, name, age, picture }
+  const body = typeof authPayload === 'string' 
+    ? { credential: authPayload } 
+    : authPayload;
+
   const res = await fetch(`${API_BASE}/auth/google`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, name, age: Number(age) || 20 })
+    body: JSON.stringify(body)
   });
   const data = await handleResponse(res);
-  setAuthToken(data.token);
+  setAuthToken(data.token, data.user);
   return data;
 }
 
@@ -95,6 +113,9 @@ export async function getMe() {
       headers: getAuthHeaders()
     });
     const data = await handleResponse(res);
+    if (data.user) {
+      localStorage.setItem('studymind_user', JSON.stringify(data.user));
+    }
     return data.user;
   } catch (err) {
     setAuthToken('');
