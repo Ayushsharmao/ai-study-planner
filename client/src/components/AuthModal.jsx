@@ -196,7 +196,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                       id="input-auth-name"
                       type="text"
                       className="form-input"
-                      placeholder="e.g. Ayush Sharma"
+                      placeholder="Enter your full name"
                       required
                       value={name}
                       onChange={e => setName(e.target.value)}
@@ -211,7 +211,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                       min="10"
                       max="100"
                       className="form-input"
-                      placeholder="e.g. 21"
+                      placeholder="Enter your age"
                       required
                       value={age}
                       onChange={e => setAge(e.target.value)}
@@ -222,12 +222,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             )}
 
             <div className="form-group">
-              <label className="form-label">Gmail / Email Address *</label>
+              <label className="form-label">Email Address *</label>
               <input
                 id="input-auth-email"
                 type="email"
                 className="form-input"
-                placeholder="name@gmail.com"
+                placeholder="Enter your email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -240,7 +240,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                 id="input-auth-password"
                 type="password"
                 className="form-input"
-                placeholder="Minimum 6 characters"
+                placeholder="Enter password (min. 6 characters)"
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
