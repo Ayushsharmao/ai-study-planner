@@ -59,7 +59,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
   // Google Sign-In Simulation / Flow
   const handleGoogleSignIn = async () => {
-    const googleEmail = prompt('Enter your Google / Gmail address:', email || 'ayushsharma222004@gmail.com');
+    const googleEmail = prompt('Enter your Google / Gmail address:', email || '');
     if (!googleEmail || !googleEmail.includes('@')) return;
 
     const googleName = prompt('Enter your display name:', name || googleEmail.split('@')[0]);
