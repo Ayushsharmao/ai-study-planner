@@ -324,6 +324,7 @@ class StorageService {
       role: isSpecialAdmin ? 'admin' : (userData.role || 'student'),
       authProvider: userData.authProvider || 'email',
       picture: userData.picture || '',
+      emailVerified: userData.emailVerified !== undefined ? userData.emailVerified : true,
       lastLoginAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
@@ -338,6 +339,32 @@ class StorageService {
 
     this.save();
     return newUser;
+  }
+
+  // --- OTP Management ---
+  setOtp(email, data) {
+    if (!this.otpStore) this.otpStore = new Map();
+    this.otpStore.set(email.toLowerCase(), {
+      ...data,
+      expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+    });
+  }
+
+  getOtp(email) {
+    if (!this.otpStore) return null;
+    const entry = this.otpStore.get(email.toLowerCase());
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this.otpStore.delete(email.toLowerCase());
+      return null;
+    }
+    return entry;
+  }
+
+  deleteOtp(email) {
+    if (this.otpStore) {
+      this.otpStore.delete(email.toLowerCase());
+    }
   }
 
   updateUserLastLogin(userId) {

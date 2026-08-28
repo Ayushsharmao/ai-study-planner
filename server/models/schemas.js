@@ -9,6 +9,7 @@ export const UserSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
   authProvider: { type: String, default: 'email' },
   picture: { type: String, default: '' },
+  emailVerified: { type: Boolean, default: true },
   lastLoginAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });

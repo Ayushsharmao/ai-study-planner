@@ -66,6 +66,35 @@ export async function getPublicSettings() {
 }
 
 // --- Authentication ---
+export async function sendRegistrationOtp(name, email, password, age) {
+  const res = await fetch(`${API_BASE}/auth/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password, age: Number(age) || 20 })
+  });
+  return handleResponse(res);
+}
+
+export async function verifyRegistrationOtp(email, otp) {
+  const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp })
+  });
+  const data = await handleResponse(res);
+  setAuthToken(data.token, data.user);
+  return data;
+}
+
+export async function resendOtp(email) {
+  const res = await fetch(`${API_BASE}/auth/resend-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  return handleResponse(res);
+}
+
 export async function login(email, password) {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',

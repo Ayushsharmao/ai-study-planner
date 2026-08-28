@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { storage } from '../services/storage.js';
 import { generateToken } from '../middleware/auth.js';
+import { sendOtpEmail } from '../services/emailService.js';
 
 function decodeGoogleJwt(credential) {
   try {
@@ -15,6 +16,149 @@ function decodeGoogleJwt(credential) {
   }
 }
 
+// 1. Send OTP for Registration
+export const sendRegistrationOtp = async (req, res) => {
+  try {
+    const { name, email, password, age } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, error: 'Name, email, and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = storage.getUserByEmail(cleanEmail);
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'An account with this email already exists. Please sign in.' });
+    }
+
+    // Generate 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash password
+    const salt = bcrypt.genSaltSync(10);
+    const passwordHash = bcrypt.hashSync(password, salt);
+    const parsedAge = age ? parseInt(age, 10) : 20;
+
+    // Store pending registration with 10-minute expiry
+    storage.setOtp(cleanEmail, {
+      otp,
+      name: name.trim(),
+      email: cleanEmail,
+      age: parsedAge,
+      passwordHash
+    });
+
+    // Send email via Nodemailer
+    const emailResult = await sendOtpEmail(cleanEmail, otp, name.trim());
+
+    res.json({
+      success: true,
+      message: `A 6-digit verification code has been sent to ${cleanEmail}.`,
+      fallbackOtp: emailResult.fallbackOtp || null
+    });
+  } catch (err) {
+    console.error('sendRegistrationOtp error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// 2. Verify OTP & Finalize Registration
+export const verifyRegistrationOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, error: 'Email and 6-digit verification code are required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const pending = storage.getOtp(cleanEmail);
+
+    if (!pending) {
+      return res.status(400).json({ success: false, error: 'Verification code expired or not found. Please request a new code.' });
+    }
+
+    if (pending.otp.trim() !== otp.trim()) {
+      return res.status(400).json({ success: false, error: 'Invalid verification code. Please check your email and try again.' });
+    }
+
+    // OTP Verified! Create user account
+    const isAdminEmail = cleanEmail === 'ayushsharma222004@gmail.com';
+    const role = isAdminEmail ? 'admin' : 'student';
+
+    const newUser = storage.createUser({
+      name: pending.name,
+      email: cleanEmail,
+      age: pending.age,
+      passwordHash: pending.passwordHash,
+      authProvider: 'email',
+      emailVerified: true,
+      role
+    });
+
+    // Clear OTP
+    storage.deleteOtp(cleanEmail);
+
+    const token = generateToken(newUser);
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        age: newUser.age,
+        role: newUser.role,
+        authProvider: newUser.authProvider,
+        emailVerified: true,
+        createdAt: newUser.createdAt
+      }
+    });
+  } catch (err) {
+    console.error('verifyRegistrationOtp error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// 3. Resend OTP
+export const resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email is required' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const pending = storage.getOtp(cleanEmail);
+
+    if (!pending) {
+      return res.status(400).json({ success: false, error: 'No pending registration session found. Please re-enter your details.' });
+    }
+
+    // Generate new OTP
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    pending.otp = newOtp;
+    storage.setOtp(cleanEmail, pending);
+
+    const emailResult = await sendOtpEmail(cleanEmail, newOtp, pending.name);
+
+    res.json({
+      success: true,
+      message: `A new verification code has been sent to ${cleanEmail}.`,
+      fallbackOtp: emailResult.fallbackOtp || null
+    });
+  } catch (err) {
+    console.error('resendOtp error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// Direct register fallback (if needed)
 export const register = async (req, res) => {
   try {
     const { name, email, password, age } = req.body;
@@ -33,14 +177,10 @@ export const register = async (req, res) => {
       return res.status(400).json({ success: false, error: 'An account with this email already exists. Please sign in.' });
     }
 
-    // Hash password
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(password, salt);
-
-    // Designated master admin
     const isAdminEmail = cleanEmail === 'ayushsharma222004@gmail.com';
     const role = isAdminEmail ? 'admin' : 'student';
-
     const parsedAge = age ? parseInt(age, 10) : 20;
 
     const newUser = storage.createUser({
@@ -49,6 +189,7 @@ export const register = async (req, res) => {
       age: parsedAge,
       passwordHash,
       authProvider: 'email',
+      emailVerified: true,
       role
     });
 
@@ -64,6 +205,7 @@ export const register = async (req, res) => {
         age: newUser.age,
         role: newUser.role,
         authProvider: newUser.authProvider,
+        emailVerified: true,
         createdAt: newUser.createdAt
       }
     });
@@ -105,6 +247,7 @@ export const login = async (req, res) => {
         age: user.age,
         role: user.role,
         authProvider: user.authProvider || 'email',
+        emailVerified: user.emailVerified !== undefined ? user.emailVerified : true,
         picture: user.picture || '',
         createdAt: user.createdAt
       }
@@ -140,7 +283,7 @@ export const googleAuth = async (req, res) => {
     let user = storage.getUserByEmail(cleanEmail);
 
     if (!user) {
-      // Auto-register new Google user with private starter course pack
+      // Auto-register new Google user (Google emails are inherently verified)
       const salt = bcrypt.genSaltSync(10);
       const randomPassword = Math.random().toString(36).slice(-10);
       const passwordHash = bcrypt.hashSync(randomPassword, salt);
@@ -152,6 +295,7 @@ export const googleAuth = async (req, res) => {
         age: age ? parseInt(age, 10) : 20,
         passwordHash,
         authProvider: 'google',
+        emailVerified: true,
         picture: userPicture,
         role: isAdmin ? 'admin' : 'student'
       });
@@ -172,6 +316,7 @@ export const googleAuth = async (req, res) => {
         age: user.age,
         role: user.role,
         authProvider: user.authProvider || 'google',
+        emailVerified: true,
         picture: user.picture || '',
         createdAt: user.createdAt
       }
@@ -198,6 +343,7 @@ export const getMe = async (req, res) => {
         age: user.age,
         role: user.role,
         authProvider: user.authProvider || 'email',
+        emailVerified: user.emailVerified !== undefined ? user.emailVerified : true,
         picture: user.picture || '',
         createdAt: user.createdAt
       }

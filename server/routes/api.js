@@ -31,6 +31,9 @@ router.get('/public-settings', (req, res) => {
 });
 
 // Auth Routes (public)
+router.post('/auth/send-otp', authCtrl.sendRegistrationOtp);
+router.post('/auth/verify-otp', authCtrl.verifyRegistrationOtp);
+router.post('/auth/resend-otp', authCtrl.resendOtp);
 router.post('/auth/register', authCtrl.register);
 router.post('/auth/login', authCtrl.login);
 router.post('/auth/google', authCtrl.googleAuth);
